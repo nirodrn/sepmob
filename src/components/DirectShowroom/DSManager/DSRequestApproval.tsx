@@ -3,15 +3,22 @@ import { useFirebaseData, useFirebaseActions } from '../../../hooks/useFirebaseD
 import { useAuth } from '../../../context/AuthContext';
 import { LoadingSpinner } from '../../Common/LoadingSpinner';
 import { ErrorMessage } from '../../Common/ErrorMessage';
-import { Badge } from '../../Common/Badge';
+
+interface RequestItem {
+  productName: string;
+  quantity: number;
+  location: string;
+  urgent: boolean;
+}
 
 interface Request {
   id: string;
   customId: string;
   requestedAt: string;
+  requestedBy: string;
   requestedByName: string;
   status: 'pending' | 'approved' | 'rejected';
-  items: any[];
+  items: RequestItem[];
   notes: string;
 }
 
@@ -29,10 +36,8 @@ export function DSRequestApproval() {
         approvedByName: userData.name,
         approvedAt: new Date().toISOString(),
       });
-      // Add a success toast notification here if you want
     } catch (e) {
       console.error("Failed to update request", e);
-      // Add an error toast notification here
     }
   };
 
@@ -40,62 +45,43 @@ export function DSRequestApproval() {
   if (error) return <ErrorMessage message="Failed to load requests." />;
 
   const pendingRequests = requests
-    ? Object.values(requests).filter(r => r.status === 'pending')
+    ? Object.entries(requests)
+        .map(([id, r]) => ({ ...r, id }))
+        .filter(r => r.status === 'pending')
     : [];
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">Approve Product Requests</h2>
-      
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <h3 className="text-lg font-medium text-gray-900 p-4 border-b border-gray-200">Approve New Requests</h3>
       {pendingRequests.length === 0 ? (
-        <p className="text-gray-600">There are no pending requests to review.</p>
+        <p className="text-gray-600 p-4">No pending requests.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request ID</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested By</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                <th scope="col" className="relative px-6 py-3">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {pendingRequests.map((request) => (
-                <tr key={request.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{request.customId}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{request.requestedByName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(request.requestedAt).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <ul className="list-disc list-inside">
-                      {request.items.map((item, index) => (
-                        <li key={index}>{item.productName} (x{item.quantity})</li>
-                      ))}
-                    </ul>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{request.notes}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                    <button 
-                      onClick={() => handleUpdateRequest(request.id, 'approved')} 
-                      className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700"
-                    >
-                      Approve
-                    </button>
-                    <button 
-                      onClick={() => handleUpdateRequest(request.id, 'rejected')} 
-                      className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700"
-                    >
-                      Reject
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="divide-y divide-gray-200">
+          {pendingRequests.map((request) => (
+            <div key={request.id} className="p-4">
+              <div className="flex justify-between items-start mb-2">
+                  <div>
+                      <p className="text-sm text-gray-500">Request ID: <span className="font-medium text-gray-800">{request.customId}</span></p>
+                      <p className="text-sm text-gray-500">Requested By: <span className="font-medium text-gray-800">{request.requestedByName}</span></p>
+                      <p className="text-sm text-gray-500">On: {new Date(request.requestedAt).toLocaleString()}</p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button onClick={() => handleUpdateRequest(request.id, 'approved')} className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600">Approve</button>
+                    <button onClick={() => handleUpdateRequest(request.id, 'rejected')} className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600">Reject</button>
+                  </div>
+              </div>
+              
+              <ul className="text-sm text-gray-700 list-disc list-inside space-y-1">
+                  {request.items.map((item, index) => (
+                      <li key={index}>
+                          <span className="font-semibold">{item.productName}</span> (Qty: {item.quantity}) - Location: {item.location}
+                          {item.urgent && <span className='text-red-600 font-bold ml-2'>Urgent</span>}
+                      </li>
+                  ))}
+              </ul>
+              {request.notes && <p className="mt-2 text-xs text-gray-500 italic">Notes: {request.notes}</p>}
+            </div>
+          ))}
         </div>
       )}
     </div>

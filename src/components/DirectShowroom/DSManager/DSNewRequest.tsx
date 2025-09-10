@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useFirebaseActions, useFirebaseData } from '../../../hooks/useFirebaseData';
@@ -69,29 +68,31 @@ export function DSNewRequest({ isOpen, onClose, onSuccess }: DSNewRequestProps) 
   };
 
   const handleSubmit = async () => {
-    if (!userData || items.length === 0 || !items[0].productId) return;
+    if (!userData || items.some(item => !item.productId || item.quantity <= 0)) {
+        alert("Please fill all product fields and ensure quantity is positive.");
+        return;
+    }
     setLoading(true);
 
     try {
-      const firstItem = items[0];
-      const selectedProduct = products.find(p => p.id === firstItem.productId);
-      const variantName = selectedProduct ? selectedProduct.variant.replace(/\s/g, '') : 'item';
-      const customId = `DSR-${Date.now()}-${variantName}-${Math.floor(Math.random() * 1000)}`;
+      const customId = `DSR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
       const requestData = {
         customId: customId,
         requestedBy: userData.id,
-        requestedByName: userData.name,
+        requestedByName: userData.name || 'N/A',
         requestedAt: new Date().toISOString(),
         status: 'pending',
-        items,
+        items: items.filter(item => item.productId),
         notes,
-        approveStatus: null,
       };
 
-      await addData(requestData);
+      await addData('', requestData);
+      
       onSuccess();
       onClose();
+      setItems([{ productId: '', productName: '', quantity: 1, urgent: false, location: '' }]);
+      setNotes('');
     } catch (error) {
       console.error("Error creating request:", error);
     } finally {
@@ -102,62 +103,67 @@ export function DSNewRequest({ isOpen, onClose, onSuccess }: DSNewRequestProps) 
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="New Product Request">
-      {inventoryLoading ? (
-        <LoadingSpinner />
-      ) : inventoryError ? (
-        <ErrorMessage message={inventoryError.message} />
-      ) : (
-        <div className="space-y-4">
-          {items.map((item, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <select
-                value={item.productId}
-                onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
-                className="p-2 border rounded w-full"
-              >
-                <option value="">Select a product</option>
-                {products.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} - {p.variant}</option>
-                ))}
-              </select>
-              <input
-                type="number"
-                value={item.quantity}
-                onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value, 10))}
-                className="p-2 border rounded w-24"
-                min="1"
-              />
-               <input
-                type="text"
-                value={item.location}
-                onChange={(e) => handleItemChange(index, 'location', e.target.value)}
-                placeholder="Location"
-                className="p-2 border rounded w-32"
-              />
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={item.urgent}
-                  onChange={(e) => handleItemChange(index, 'urgent', e.target.checked)}
-                />
-                <span>Urgent</span>
-              </label>
-              <button onClick={() => removeItem(index)} className="text-red-500">X</button>
-            </div>
-          ))}
-          <button onClick={addItem}>+ Add Item</button>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Notes..."
-            className="w-full p-2 border rounded"
-          />
-          <button onClick={handleSubmit} disabled={loading} className="w-full p-2 bg-blue-500 text-white rounded">
-            {loading ? 'Submitting...' : 'Submit Request'}
-          </button>
-        </div>
-      )}
-    </Modal>
+      <Modal isOpen={isOpen} onClose={onClose} title="New Product Request">
+        {inventoryLoading ? (
+          <LoadingSpinner />
+        ) : inventoryError ? (
+          <ErrorMessage message={inventoryError.message} />
+        ) : (
+          <div className="space-y-4">
+            {items.map((item, index) => (
+              <div key={index} className="flex items-center space-x-2 p-2 border rounded">
+                <div className="flex-grow">
+                    <select
+                        value={item.productId}
+                        onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
+                        className="p-2 border rounded w-full mb-2"
+                    >
+                        <option value="">Select a product</option>
+                        {products.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} - {p.variant}</option>
+                        ))}
+                    </select>
+                    <div className="flex items-center space-x-2">
+                        <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value, 10) || 1)}
+                            className="p-2 border rounded w-24"
+                            min="1"
+                            placeholder="Qty"
+                        />
+                        <input
+                            type="text"
+                            value={item.location}
+                            onChange={(e) => handleItemChange(index, 'location', e.target.value)}
+                            placeholder="Location"
+                            className="p-2 border rounded w-32"
+                        />
+                        <label className="flex items-center space-x-2 whitespace-nowrap">
+                            <input
+                            type="checkbox"
+                            checked={item.urgent}
+                            onChange={(e) => handleItemChange(index, 'urgent', e.target.checked)}
+                            />
+                            <span>Urgent</span>
+                        </label>
+                    </div>
+                </div>
+                <button onClick={() => removeItem(index)} className="text-red-500 font-bold self-center text-xl">X</button>
+              </div>
+            ))}
+            <button onClick={addItem} className="text-blue-500">+ Add Another Item</button>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any notes for this request..."
+              className="w-full p-2 border rounded"
+            />
+            <button onClick={handleSubmit} disabled={loading} className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400">
+              {loading ? 'Submitting...' : 'Submit Request'}
+            </button>
+          </div>
+        )}
+      </Modal>
   );
 }

@@ -10,12 +10,11 @@ interface NewProductRequestProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  databaseTable: 'drReqs' | 'dsReqs' | 'distributorReqs' | 'salesRequests'; // Make table configurable
 }
 
-export function NewProductRequest({ isOpen, onClose, onSuccess, databaseTable }: NewProductRequestProps) {
+export function NewProductRequest({ isOpen, onClose, onSuccess }: NewProductRequestProps) {
   const { userData } = useAuth();
-  const { addData } = useFirebaseActions();
+  const { addData } = useFirebaseActions('dsreqs');
   const { data: productsData, loading: productsLoading, error: productsError } = useFirebaseData('products');
   
   const [loading, setLoading] = useState(false);
@@ -69,7 +68,7 @@ export function NewProductRequest({ isOpen, onClose, onSuccess, databaseTable }:
         return;
       }
 
-      await addData(databaseTable, { // Use the prop to determine the table
+      await addData('', { 
         requestedBy: userData.id,
         requestedByName: userData.name,
         requestedByRole: userData.role,

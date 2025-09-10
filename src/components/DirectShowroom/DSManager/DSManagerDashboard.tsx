@@ -4,7 +4,7 @@ import { DashboardCards, getDashboardCards } from '../../Dashboard/DashboardCard
 import { DSCustomerInvoice } from './DSCustomerInvoice';
 import { DSStockManagement } from './DSStockManagement';
 import { useAuth } from '../../../context/AuthContext';
-import { FileText, Package, Users, Eye, FileCheck, Search } from 'lucide-react';
+import { FileText, Package, Users, Eye, FileCheck, Search, PlusCircle } from 'lucide-react';
 
 export function DSManagerDashboard() {
   const { userData } = useAuth();
@@ -42,14 +42,27 @@ export function DSManagerDashboard() {
           
           <div className="space-y-3">
             <Link
-              to="requests"
+              to="requests/history"
               className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors block"
             >
               <div className="flex items-center gap-3">
                 <FileCheck className="w-5 h-5 text-blue-600" />
                 <div>
-                  <p className="font-medium text-blue-900">Product Requests</p>
-                  <p className="text-sm text-blue-700">Create and view requests</p>
+                  <p className="font-medium text-blue-900">Product Request History</p>
+                  <p className="text-sm text-blue-700">View past requests</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              to="requests/new"
+              className="w-full text-left p-3 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-colors block"
+            >
+              <div className="flex items-center gap-3">
+                <PlusCircle className="w-5 h-5 text-teal-600" />
+                <div>
+                  <p className="font-medium text-teal-900">New Product Request</p>
+                  <p className="text-sm text-teal-700">Create a new request</p>
                 </div>
               </div>
             </Link>

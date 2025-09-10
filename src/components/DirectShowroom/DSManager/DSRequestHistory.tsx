@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useFirebaseData } from '../../../hooks/useFirebaseData';
 import { useAuth } from '../../../context/AuthContext';
 import { LoadingSpinner } from '../../Common/LoadingSpinner';
 import { ErrorMessage } from '../../Common/ErrorMessage';
 import { Badge } from '../../Common/Badge';
 
+interface RequestItem {
+  productName: string;
+  quantity: number;
+  location: string;
+  urgent: boolean;
+}
+
 interface Request {
-  id: string;
+  id: string; 
   customId: string;
   requestedAt: string;
   requestedBy: string;
   status: 'pending' | 'approved' | 'rejected';
-  items: any[];
+  items: RequestItem[];
   notes: string;
 }
 
@@ -24,7 +31,8 @@ export function DSRequestHistory() {
   if (!userData) return <p>Please log in to see your request history.</p>;
 
   const userRequests = allRequests 
-    ? Object.values(allRequests)
+    ? Object.entries(allRequests)
+        .map(([id, r]) => ({ ...r, id }))
         .filter(r => r.requestedBy === userData.id)
         .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime())
     : [];
@@ -37,11 +45,11 @@ export function DSRequestHistory() {
       ) : (
         <div className="divide-y divide-gray-200">
           {userRequests.map((request) => (
-            <div key={request.id || request.customId} className="p-4">
+            <div key={request.id} className="p-4 hover:bg-gray-50">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm text-gray-500">
-                    Request ID: <span className="font-medium text-gray-800">{request.customId || 'N/A'}</span>
+                    Request ID: <span className="font-medium text-gray-800">{request.customId}</span>
                   </p>
                   <p className="text-sm text-gray-500">
                     Requested on {new Date(request.requestedAt).toLocaleString()}
@@ -58,10 +66,11 @@ export function DSRequestHistory() {
                 </Badge>
               </div>
               <div className="mt-3">
-                <ul className="text-sm text-gray-700 list-disc list-inside">
+                <ul className="text-sm text-gray-700 list-disc list-inside space-y-1">
                   {request.items.map((item, index) => (
                     <li key={index}>
-                      {item.productName} (Qty: {item.quantity})
+                      <span className="font-semibold">{item.productName}</span> (Qty: {item.quantity}) - Location: {item.location}
+                      {item.urgent && <span className='text-red-600 font-bold ml-2'>Urgent</span>}
                     </li>
                   ))}
                 </ul>

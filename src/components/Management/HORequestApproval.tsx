@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useFirebaseData, useFirebaseActions } from '../../hooks/useFirebaseData';
 import { useAuth } from '../../context/AuthContext';
@@ -20,7 +19,8 @@ interface Request {
 export function HORequestApproval() {
   const { userData } = useAuth();
   const { data: requests, loading, error } = useFirebaseData<Record<string, Request>>('dsreqs');
-  const { updateData, addData } = useFirebaseActions();
+  const { updateData: updateRequest } = useFirebaseActions('dsreqs');
+  const { addData: addActivity } = useFirebaseActions('activities');
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
@@ -29,7 +29,8 @@ export function HORequestApproval() {
 
   const pendingRequests = useMemo(() => {
     if (!requests) return [];
-    return Object.values(requests)
+    return Object.entries(requests)
+      .map(([id, r]) => ({ ...r, id }))
       .filter(r => r.status === 'pending')
       .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
   }, [requests]);
@@ -49,7 +50,7 @@ export function HORequestApproval() {
     setProcessing(true);
 
     try {
-      await updateData(`dsreqs/${selectedRequest.id}`, {
+      await updateRequest(selectedRequest.id, {
         status: approvalAction === 'approve' ? 'approved' : 'rejected',
         approvedBy: userData.id,
         approvedByName: userData.name,
@@ -57,7 +58,7 @@ export function HORequestApproval() {
         approvalNotes: approvalNotes,
       });
 
-      await addData('activities', {
+      await addActivity('', {
         type: approvalAction === 'approve' ? 'ds_request_approved' : 'ds_request_rejected',
         timestamp: new Date().toISOString(),
         userId: userData.id,
@@ -91,7 +92,7 @@ export function HORequestApproval() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="divide-y divide-gray-200">
             {pendingRequests.map((request) => (
-              <div key={request.customId || request.id} className="p-6">
+              <div key={request.id} className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-sm text-gray-500">

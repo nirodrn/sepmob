@@ -15,7 +15,6 @@ import { NotFound } from './pages/NotFound';
 import { LoadingSpinner } from './components/Common/LoadingSpinner';
 import { DSProductRequests } from './pages/DirectShowroom/DSProductRequests';
 import { HOProductRequests } from './pages/Management/HOProductRequests';
-import { RequestTracker } from './pages/Tracking/RequestTracker';
 
 // Role-specific dashboards
 import { DRDashboard } from './pages/DirectRepresentative/DRDashboard';
@@ -85,8 +84,6 @@ function App() {
             <Route path="/analytics" element={<ProtectedPage><SalesAnalytics /></ProtectedPage>} />
             <Route path="/settings" element={<ProtectedPage><UserSettings /></ProtectedPage>} />
             <Route path="/ho/product-requests" element={<ProtectedPage><HOProductRequests /></ProtectedPage>} />
-            <Route path="/requests" element={<ProtectedPage><RequestTracker /></ProtectedPage>} />
-            <Route path="/track-requests" element={<ProtectedPage><RequestTracker /></ProtectedPage>} />
 
             <Route path="/direct-showroom" element={<ProtectedPage><Outlet /></ProtectedPage>}>
                 <Route index element={<DSManagerDashboard />} />
