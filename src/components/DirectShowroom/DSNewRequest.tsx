@@ -22,7 +22,7 @@ interface RequestItem {
 
 export function DSNewRequest({ isOpen, onClose, onSuccess }: DSNewRequestProps) {
   const { userData } = useAuth();
-  const { updateData } = useFirebaseActions();
+  const { addData } = useFirebaseActions('dsreqs');
   const { data: inventoryData, loading: inventoryLoading, error: inventoryError } = useFirebaseData('finishedGoodsPackagedInventory');
 
   const [loading, setLoading] = useState(false);
@@ -35,7 +35,7 @@ export function DSNewRequest({ isOpen, onClose, onSuccess }: DSNewRequestProps) 
     if (!inventoryData) return [];
     const productMap = new Map();
     Object.values(inventoryData).forEach((item: any) => {
-      if (!productMap.has(item.productId)) {
+      if (item.productId && !productMap.has(item.productId)) {
         productMap.set(item.productId, {
           id: item.productId,
           name: item.productName,
@@ -76,9 +76,10 @@ export function DSNewRequest({ isOpen, onClose, onSuccess }: DSNewRequestProps) 
       const firstItem = items[0];
       const selectedProduct = products.find(p => p.id === firstItem.productId);
       const variantName = selectedProduct ? selectedProduct.variant.replace(/\s/g, '') : 'item';
-      const newId = `DSR-${Date.now()}-${variantName}-${Math.floor(Math.random() * 1000)}`;
+      const customId = `DSR-${Date.now()}-${variantName}-${Math.floor(Math.random() * 1000)}`;
 
       const requestData = {
+        customId: customId,
         requestedBy: userData.id,
         requestedByName: userData.name,
         requestedAt: new Date().toISOString(),
@@ -88,7 +89,7 @@ export function DSNewRequest({ isOpen, onClose, onSuccess }: DSNewRequestProps) 
         approveStatus: null,
       };
 
-      await updateData(`dsreqs/${newId}`, requestData);
+      await addData(requestData);
       onSuccess();
       onClose();
     } catch (error) {
@@ -97,6 +98,8 @@ export function DSNewRequest({ isOpen, onClose, onSuccess }: DSNewRequestProps) 
       setLoading(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="New Product Request">

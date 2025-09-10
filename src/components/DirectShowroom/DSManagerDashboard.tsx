@@ -1,27 +1,18 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DashboardCards, getDashboardCards } from '../../components/Dashboard/DashboardCards';
-import { DSNewRequest } from '../../components/DirectShowroom/DSNewRequest';
-import { DSCustomerInvoice } from '../../components/DirectShowroom/DSCustomerInvoice';
-import { DSStockManagement } from '../../components/DirectShowroom/DSStockManagement';
+import { DashboardCards, getDashboardCards } from '../Dashboard/DashboardCards';
+import { DSCustomerInvoice } from './DSCustomerInvoice';
+import { DSStockManagement } from './DSStockManagement';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, FileText, Package, Users, Eye, FileCheck } from 'lucide-react';
-import { DSRequestHistory } from '../../components/DirectShowroom/DSRequestHistory';
+import { FileText, Package, Users, Eye, FileCheck, Search } from 'lucide-react';
 
 export function DSManagerDashboard() {
   const { userData } = useAuth();
-  const [showNewRequest, setShowNewRequest] = useState(false);
   const [showCustomerInvoice, setShowCustomerInvoice] = useState(false);
-  const [showStockView, setShowStockView] = useState(false);
 
   if (!userData) return null;
 
   const cards = getDashboardCards(userData.role);
-
-  const handleRequestSuccess = () => {
-    console.log('Request created successfully');
-    setShowNewRequest(false);
-  };
 
   const handleCustomerInvoiceSuccess = () => {
     console.log('Customer invoice created successfully');
@@ -41,30 +32,40 @@ export function DSManagerDashboard() {
       <DashboardCards cards={cards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          {showStockView ? (
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Showroom Stock</h3>
             <DSStockManagement />
-          ) : (
-            <DSRequestHistory />
-          )}
         </div>
         
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Manager Actions</h3>
           
           <div className="space-y-3">
-            <button
-              onClick={() => setShowNewRequest(true)}
-              className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
+            <Link
+              to="/direct-showroom/requests"
+              className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors block"
             >
               <div className="flex items-center gap-3">
-                <Plus className="w-5 h-5 text-blue-600" />
+                <FileCheck className="w-5 h-5 text-blue-600" />
                 <div>
-                  <p className="font-medium text-blue-900">Request Products</p>
-                  <p className="text-sm text-blue-700">Request stock from HO</p>
+                  <p className="font-medium text-blue-900">Product Requests</p>
+                  <p className="text-sm text-blue-700">Create and view requests</p>
                 </div>
               </div>
-            </button>
+            </Link>
+
+            <Link
+              to="/track-requests"
+              className="w-full text-left p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors block"
+            >
+              <div className="flex items-center gap-3">
+                <Search className="w-5 h-5 text-indigo-600" />
+                <div>
+                  <p className="font-medium text-indigo-900">Track All Requests</p>
+                  <p className="text-sm text-indigo-700">Search and view status</p>
+                </div>
+              </div>
+            </Link>
             
             <button
               onClick={() => setShowCustomerInvoice(true)}
@@ -79,17 +80,17 @@ export function DSManagerDashboard() {
               </div>
             </button>
             
-            <button 
-              onClick={() => setShowStockView(!showStockView)}
-              className="w-full text-left p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors">
+            <Link 
+              to="/inventory"
+              className="w-full text-left p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors block">
               <div className="flex items-center gap-3">
                 <Eye className="w-5 h-5 text-amber-600" />
                 <div>
-                  <p className="font-medium text-amber-900">{showStockView ? 'Hide' : 'View'} Stock</p>
-                  <p className="text-sm text-amber-700">Check showroom inventory</p>
+                  <p className="font-medium text-amber-900">View Full Inventory</p>
+                  <p className="text-sm text-amber-700">Check all warehouse stock</p>
                 </div>
               </div>
-            </button>
+            </Link>
 
             <button className="w-full text-left p-3 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors">
               <div className="flex items-center gap-3">
@@ -103,12 +104,6 @@ export function DSManagerDashboard() {
           </div>
         </div>
       </div>
-
-      <DSNewRequest
-        isOpen={showNewRequest}
-        onClose={() => setShowNewRequest(false)}
-        onSuccess={handleRequestSuccess}
-      />
 
       <DSCustomerInvoice
         isOpen={showCustomerInvoice}

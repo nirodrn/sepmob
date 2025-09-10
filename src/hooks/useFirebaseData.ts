@@ -52,6 +52,17 @@ export function useFirebaseActions() {
     return newRef.key;
   };
 
+  const setData = async (path: string, data: any) => {
+    if (!currentUser) throw new Error('User not authenticated');
+    
+    const dataRef = ref(database, path);
+    await set(dataRef, {
+      ...data,
+      createdAt: Date.now(),
+      createdBy: currentUser.uid
+    });
+  };
+
   const updateData = async (path: string, data: any) => {
     if (!currentUser) throw new Error('User not authenticated');
     
@@ -70,5 +81,5 @@ export function useFirebaseActions() {
     await remove(dataRef);
   };
 
-  return { addData, updateData, deleteData };
+  return { addData, setData, updateData, deleteData };
 }

@@ -15,6 +15,7 @@ import { NotFound } from './pages/NotFound';
 import { LoadingSpinner } from './components/Common/LoadingSpinner';
 import { DSProductRequests } from './pages/DirectShowroom/DSProductRequests';
 import { HOProductRequests } from './pages/Management/HOProductRequests';
+import { RequestTracker } from './pages/Tracking/RequestTracker';
 
 // Role-specific dashboards
 import { DRDashboard } from './pages/DirectRepresentative/DRDashboard';
@@ -28,8 +29,6 @@ import { AdminDashboard } from './pages/Management/AdminDashboard';
 function RoleBasedDashboard() {
   const { userData } = useAuth();
 
-  // CRITICAL FIX: The use of `userData!` was causing a crash when the component
-  // rendered before userData was populated. This defensive check prevents the crash.
   if (!userData) {
     return <LoadingSpinner text="Loading user dashboard..." />;
   }
@@ -59,7 +58,6 @@ function RoleBasedDashboard() {
   }
 }
 
-// Helper to wrap a component with the standard layout and protection
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
     <Layout>
@@ -77,7 +75,6 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-            {/* Simplified and robust routing structure */}
             <Route path="/dashboard" element={<ProtectedPage><RoleBasedDashboard /></ProtectedPage>} />
             <Route path="/invoices" element={<ProtectedPage><Invoices /></ProtectedPage>} />
             <Route path="/sales" element={<ProtectedPage><SalesTracking /></ProtectedPage>} />
@@ -87,8 +84,8 @@ function App() {
             <Route path="/settings" element={<ProtectedPage><UserSettings /></ProtectedPage>} />
             <Route path="/direct-showroom/requests" element={<ProtectedPage><DSProductRequests /></ProtectedPage>} />
             <Route path="/ho/product-requests" element={<ProtectedPage><HOProductRequests /></ProtectedPage>} />
+            <Route path="/track-requests" element={<ProtectedPage><RequestTracker /></ProtectedPage>} />
 
-            {/* Catch-all Not Found Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
