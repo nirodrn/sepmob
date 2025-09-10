@@ -7,7 +7,7 @@
       }
     },
     "dsReqs": {
-      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin' || query.orderByChild == 'requestedById' && query.equalTo == auth.uid)",
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin' || root.child('users').child(auth.uid).child('role').val() == 'DirectShowroomManager' || query.orderByChild == 'requestedById' && query.equalTo == auth.uid)",
       ".indexOn": ["requestedById"],
       "$requestId": {
         ".read": "auth != null && (data.child('requestedById').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin')",
@@ -40,7 +40,8 @@
     },
     "customers": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      ".write": "auth != null",
+      ".indexOn": ["name", "totalPurchases", "lastPurchase"]
     },
     "salesActivities": {
       ".read": "auth != null",

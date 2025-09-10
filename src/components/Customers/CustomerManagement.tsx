@@ -28,7 +28,9 @@ export function CustomerManagement() {
   const [formLoading, setFormLoading] = useState(false);
 
   const customers = useMemo(() => 
-    customersData ? Object.entries(customersData).map(([id, data]) => ({ id, ...(data as any) })) : [], 
+    (customersData && typeof customersData === 'object') 
+      ? Object.entries(customersData).map(([id, data]) => ({ id, ...(data as any) })) 
+      : [],
   [customersData]);
 
   const [newCustomer, setNewCustomer] = useState({
@@ -270,7 +272,7 @@ export function CustomerManagement() {
               type="tel"
               value={newCustomer.contact}
               onChange={(e) => setNewCustomer({ ...newCustomer, contact: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full border border-gray-300 rounded-.lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>

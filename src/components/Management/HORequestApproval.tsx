@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, Clock, AlertTriangle, User, Package } from 'lucide-react';
+import { CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useFirebaseData, useFirebaseActions } from '../../hooks/useFirebaseData';
 import { useAuth } from '../../context/AuthContext';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
 import { ErrorMessage } from '../Common/ErrorMessage';
 import { Modal } from '../Common/Modal';
 
-export function DSRequestApproval() {
+export function HORequestApproval() {
   const { userData } = useAuth();
   const { data: dsRequestsData, loading, error } = useFirebaseData('dsReqs');
   const { updateData, addData } = useFirebaseActions();
@@ -16,9 +16,7 @@ export function DSRequestApproval() {
   const [approvalNotes, setApprovalNotes] = useState('');
   const [processing, setProcessing] = useState(false);
 
-  // Defensively render loading and error states first.
-  if (loading) return <LoadingSpinner text="Loading DS requests..." />;
-  // CRITICAL FIX: The error object itself cannot be rendered. This now passes a string.
+  if (loading) return <LoadingSpinner text="Loading product requests..." />;
   if (error) return <ErrorMessage message={error.message || 'Failed to load requests.'} />;
 
   const requestsArray = (dsRequestsData && typeof dsRequestsData === 'object') 
@@ -78,45 +76,39 @@ export function DSRequestApproval() {
       setProcessing(false);
     }
   };
-  
-  const getPriorityBadge = (priority: string) => {
-    const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium';
-    switch (priority) {
-      case 'urgent': return `${baseClasses} bg-red-100 text-red-800`;
-      case 'high': return `${baseClasses} bg-orange-100 text-orange-800`;
-      case 'normal': return `${baseClasses} bg-blue-100 text-blue-800`;
-      case 'low': return `${baseClasses} bg-gray-100 text-gray-800`;
-      default: return `${baseClasses} bg-gray-100 text-gray-800`;
-    }
-  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">DS Product Requests</h2>
-        <p className="text-gray-600 mt-1">Review and approve showroom product requests</p>
-      </div>
-
+      <h2 className="text-xl font-bold text-gray-900">Approve Product Requests</h2>
       {pendingRequests.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-          <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No pending DS requests found</p>
-        </div>
+        <p>No pending requests.</p>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="divide-y divide-gray-200">
             {pendingRequests.map((request) => (
-              <div key={request.id} className="p-6 hover:bg-gray-50">
-                <div className="flex items-start justify-between">
-                   {/* ... (rest of the UI is unchanged) ... */}
-                </div>
+              <div key={request.id} className="p-6">{/* UI for each request */}
+                <button onClick={() => handleApprovalAction(request, 'approve')}>Approve</button>
+                <button onClick={() => handleApprovalAction(request, 'reject')}>Reject</button>
               </div>
             ))}
           </div>
         </div>
       )}
-
-      {/* ... (Modal is unchanged) ... */}
+      {/* Approval Modal */}
+      {showApprovalModal && (
+        <Modal isOpen={showApprovalModal} onClose={() => setShowApprovalModal(false)} title={`Confirm ${approvalAction.charAt(0).toUpperCase() + approvalAction.slice(1)}`}>
+          <div className="space-y-4">
+            <p>Are you sure you want to {approvalAction} this request?</p>
+            <textarea
+              value={approvalNotes}
+              onChange={(e) => setApprovalNotes(e.target.value)}
+              placeholder="Add notes..."
+              className="w-full p-2 border rounded"
+            />
+            <button onClick={processApproval} disabled={processing}>{processing ? 'Processing...' : 'Confirm'}</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -13,6 +13,8 @@ import { UserSettings } from './components/Settings/UserSettings';
 import { Login } from './pages/Login';
 import { NotFound } from './pages/NotFound';
 import { LoadingSpinner } from './components/Common/LoadingSpinner';
+import { DSProductRequests } from './pages/DirectShowroom/DSProductRequests';
+import { HOProductRequests } from './pages/Management/HOProductRequests';
 
 // Role-specific dashboards
 import { DRDashboard } from './pages/DirectRepresentative/DRDashboard';
@@ -83,6 +85,8 @@ function App() {
             <Route path="/customers" element={<ProtectedPage><CustomerManagement /></ProtectedPage>} />
             <Route path="/analytics" element={<ProtectedPage><SalesAnalytics /></ProtectedPage>} />
             <Route path="/settings" element={<ProtectedPage><UserSettings /></ProtectedPage>} />
+            <Route path="/direct-showroom/requests" element={<ProtectedPage><DSProductRequests /></ProtectedPage>} />
+            <Route path="/ho/product-requests" element={<ProtectedPage><HOProductRequests /></ProtectedPage>} />
 
             {/* Catch-all Not Found Route */}
             <Route path="*" element={<NotFound />} />

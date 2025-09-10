@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { DashboardCards, getDashboardCards } from '../../components/Dashboard/DashboardCards';
 import { NewProductRequest } from '../../components/DirectRepresentative/NewProductRequest';
 import { DSCustomerInvoice } from '../../components/DirectShowroom/DSCustomerInvoice';
 import { DSStockManagement } from '../../components/DirectShowroom/DSStockManagement';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, FileText, Package, Users, Eye } from 'lucide-react';
+import { Plus, FileText, Package, Users, Eye, FileCheck } from 'lucide-react';
 import { DSRequestHistory } from '../../components/DirectShowroom/DSRequestHistory';
 
 export function DSManagerDashboard() {
@@ -63,6 +64,16 @@ export function DSManagerDashboard() {
                 </div>
               </div>
             </button>
+
+            <Link to="/direct-showroom/requests" className="w-full text-left p-3 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg transition-colors block">
+              <div className="flex items-center gap-3">
+                <FileCheck className="w-5 h-5 text-cyan-600" />
+                <div>
+                  <p className="font-medium text-cyan-900">Product Requests</p>
+                  <p className="text-sm text-cyan-700">View and approve requests</p>
+                </div>
+              </div>
+            </Link>
             
             <button
               onClick={() => setShowCustomerInvoice(true)}

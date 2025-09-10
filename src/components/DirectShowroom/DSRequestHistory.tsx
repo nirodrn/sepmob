@@ -29,20 +29,21 @@ export function DSRequestHistory() {
 
   const { data: requestsData, loading, error } = useFirebaseQuery(requestsQuery);
 
+  // Hooks must be called unconditionally at the top level.
+  const sortedRequests = useMemo(() => {
+    if (!requestsData || typeof requestsData !== 'object') return [];
+    const requestsArray = Object.entries(requestsData).map(([id, data]) => ({ id, ...(data as any) }));
+    return requestsArray.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [requestsData]);
+
+  // Conditional rendering can happen after all hooks are called.
   if (loading) {
     return <LoadingSpinner text="Loading request history..." />;
   }
 
   if (error) {
-    return <ErrorMessage message={`Error loading history: ${error}`} />;
+    return <ErrorMessage message={`Error loading history: ${error.message}`} />;
   }
-
-  const sortedRequests = useMemo(() => {
-    // CRITICAL FIX: Ensure data is a processable object before mapping.
-    if (!requestsData || typeof requestsData !== 'object') return [];
-    const requestsArray = Object.entries(requestsData).map(([id, data]) => ({ id, ...data as any }));
-    return requestsArray.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [requestsData]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -66,7 +67,7 @@ export function DSRequestHistory() {
                     <p className="text-sm text-gray-600">
                       Quantity: {request.items[0].quantity} {request.items[0].unit}
                     </p>
-                    {request.notes && <p className="text-sm text-gray-500 mt-1 italic">"{request.notes}"</p>}
+                    {request.notes && <p className="text-sm text-gray-500 mt-1 italic">\"{request.notes}\"</p>}
                   </div>
                   <div className="flex items-center gap-4">
                   <Badge variant={config.color as any}>{config.label}</Badge>
