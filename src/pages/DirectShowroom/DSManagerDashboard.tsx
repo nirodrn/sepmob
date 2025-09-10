@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardCards, getDashboardCards } from '../../components/Dashboard/DashboardCards';
-import { NewProductRequest } from '../../components/DirectRepresentative/NewProductRequest';
+import { DSNewRequest } from '../../components/DirectShowroom/DSNewRequest';
 import { DSCustomerInvoice } from '../../components/DirectShowroom/DSCustomerInvoice';
 import { DSStockManagement } from '../../components/DirectShowroom/DSStockManagement';
 import { useAuth } from '../../context/AuthContext';
@@ -20,6 +20,7 @@ export function DSManagerDashboard() {
 
   const handleRequestSuccess = () => {
     console.log('Request created successfully');
+    setShowNewRequest(false);
   };
 
   const handleCustomerInvoiceSuccess = () => {
@@ -64,16 +65,6 @@ export function DSManagerDashboard() {
                 </div>
               </div>
             </button>
-
-            <Link to="/direct-showroom/requests" className="w-full text-left p-3 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg transition-colors block">
-              <div className="flex items-center gap-3">
-                <FileCheck className="w-5 h-5 text-cyan-600" />
-                <div>
-                  <p className="font-medium text-cyan-900">Product Requests</p>
-                  <p className="text-sm text-cyan-700">View and approve requests</p>
-                </div>
-              </div>
-            </Link>
             
             <button
               onClick={() => setShowCustomerInvoice(true)}
@@ -113,11 +104,10 @@ export function DSManagerDashboard() {
         </div>
       </div>
 
-      <NewProductRequest
+      <DSNewRequest
         isOpen={showNewRequest}
         onClose={() => setShowNewRequest(false)}
         onSuccess={handleRequestSuccess}
-        databaseTable="dsReqs" // Correctly set the database table
       />
 
       <DSCustomerInvoice
