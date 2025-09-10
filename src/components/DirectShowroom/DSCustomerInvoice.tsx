@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Calculator, User, Phone, MapPin } from 'lucide-react';
 import { Modal } from '../Common/Modal';
-import { useFirebaseActions } from '../../hooks/useFirebaseData';
+import { useFirebaseActions, useFirebaseData } from '../../hooks/useFirebaseData';
 import { useAuth } from '../../context/AuthContext';
 import { InvoiceItem } from '../../types';
+import { ErrorMessage } from '../Common/ErrorMessage';
 
 interface DSCustomerInvoiceProps {
   isOpen: boolean;
@@ -13,7 +14,9 @@ interface DSCustomerInvoiceProps {
 
 export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvoiceProps) {
   const { userData } = useAuth();
-  const { addData } = useFirebaseActions();
+  const { addData, updateData } = useFirebaseActions();
+  const { data: inventoryData, loading: inventoryLoading, error: inventoryError } = useFirebaseData('finishedGoodsPackagedInventory');
+
   const [loading, setLoading] = useState(false);
   
   const [customerInfo, setCustomerInfo] = useState({
@@ -31,11 +34,9 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState('');
 
-  // Available products from showroom stock
-  const products = [
-    { id: '-OZNw27pXcB5BJFTv7Na', name: 'M oil', unit: 'kg', price: 150, stock: 25 },
-    { id: '-OZOixii7R2Gb725fbKQ', name: 'B oil', unit: 'L', price: 200, stock: 15 }
-  ];
+  const productsArray = useMemo(() => 
+    inventoryData ? Object.entries(inventoryData).map(([id, data]) => ({ id, ...(data as any) })) : [],
+  [inventoryData]);
 
   const addItem = () => {
     setItems([...items, { productId: '', productName: '', quantity: 1, unit: 'units', unitPrice: 0, total: 0 }]);
@@ -49,21 +50,32 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
 
   const updateItem = (index: number, field: keyof InvoiceItem, value: any) => {
     const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
-    
+    const currentItem = { ...updatedItems[index], [field]: value };
+
     if (field === 'productId') {
-      const product = products.find(p => p.id === value);
+      const product = productsArray.find(p => p.id === value);
       if (product) {
-        updatedItems[index].productName = product.name;
-        updatedItems[index].unit = product.unit;
-        updatedItems[index].unitPrice = product.price;
+        currentItem.productName = product.name;
+        currentItem.unit = product.unit;
+        currentItem.unitPrice = product.price;
+        if (currentItem.quantity > product.stock) {
+          currentItem.quantity = product.stock;
+        }
       }
     }
-    
-    // Calculate total for this item
-    if (field === 'quantity' || field === 'unitPrice' || field === 'productId') {
-      updatedItems[index].total = updatedItems[index].quantity * updatedItems[index].unitPrice;
+
+    if (field === 'quantity') {
+        const product = productsArray.find(p => p.id === currentItem.productId);
+        if (product && value > product.stock) {
+            alert(`Maximum stock available is ${product.stock}`);
+            currentItem.quantity = product.stock;
+        } else {
+            currentItem.quantity = value;
+        }
     }
+    
+    currentItem.total = currentItem.quantity * currentItem.unitPrice;
+    updatedItems[index] = currentItem;
     
     setItems(updatedItems);
   };
@@ -96,20 +108,31 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
       
       if (validItems.length === 0) {
         alert('Please add at least one valid product');
+        setLoading(false);
         return;
       }
 
       if (!customerInfo.name.trim()) {
         alert('Please enter customer name');
+        setLoading(false);
         return;
+      }
+      
+      // Stock validation
+      for (const item of validItems) {
+        const product = productsArray.find(p => p.id === item.productId);
+        if (!product || item.quantity > product.stock) {
+          alert(`Not enough stock for ${item.productName}. Available: ${product ? product.stock : 0}, Requested: ${item.quantity}`);
+          setLoading(false);
+          return;
+        }
       }
 
       const { subtotal, discountAmount, tax, total } = calculateTotals();
       const invoiceNumber = generateInvoiceNumber();
       const dueDate = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days from now
 
-      // Create customer invoice
-      await addData('customerInvoices', {
+      const invoiceId = await addData('customerInvoices', {
         invoiceNumber,
         invoiceType: 'customer_sale',
         createdBy: userData.id,
@@ -125,7 +148,7 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
         taxRate,
         total,
         status: 'completed',
-        paymentStatus: 'paid', // Assuming immediate payment for showroom sales
+        paymentStatus: 'paid',
         paymentMethod: 'cash',
         totalPaid: total,
         remainingAmount: 0,
@@ -133,7 +156,6 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
         notes: notes.trim()
       });
 
-      // Log sales activity
       await addData('salesActivities', {
         type: 'customer_sale',
         userId: userData.id,
@@ -143,8 +165,16 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
         amount: total,
         customerName: customerInfo.name,
         invoiceNumber,
-        relatedId: invoiceNumber
+        relatedId: invoiceId
       });
+
+      // Update stock
+      const stockUpdatePromises = validItems.map(item => {
+        const product = productsArray.find(p => p.id === item.productId);
+        const newStock = (product?.stock || 0) - item.quantity;
+        return updateData(`finishedGoodsPackagedInventory/${item.productId}`, { stock: newStock });
+      });
+      await Promise.all(stockUpdatePromises);
 
       onSuccess();
       onClose();
@@ -166,8 +196,8 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Customer Invoice" size="xl">
+        {inventoryError && <ErrorMessage message="Failed to load product inventory."/>}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Customer Information */}
         <div className="bg-gray-50 p-4 rounded-lg">
           <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
             <User className="w-5 h-5" />
@@ -222,7 +252,6 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
           </div>
         </div>
 
-        {/* Invoice Items */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <label className="block text-sm font-medium text-gray-700">
@@ -250,10 +279,11 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
                     onChange={(e) => updateItem(index, 'productId', e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
+                    disabled={inventoryLoading}
                   >
-                    <option value="">Select Product</option>
-                    {products.map(product => (
-                      <option key={product.id} value={product.id}>
+                    <option value="">{inventoryLoading ? 'Loading...' : 'Select Product'}</option>
+                    {productsArray.map(product => (
+                      <option key={product.id} value={product.id} disabled={product.stock <= 0}>
                         {product.name} (Stock: {product.stock})
                       </option>
                     ))}
@@ -327,7 +357,6 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
           </div>
         </div>
 
-        {/* Calculations */}
         <div className="border-t pt-4">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-4">
@@ -339,7 +368,7 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
                   max="100"
                   step="0.1"
                   value={discount}
-                  onChange={(e) => setDiscount(parseFloat(e.target.value))}
+                  onChange={(e) => setDiscount(parseFloat(e.target.value || '0'))}
                   className="w-16 border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <span className="text-sm text-gray-600">%</span>
@@ -353,7 +382,7 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
                   max="100"
                   step="0.1"
                   value={taxRate}
-                  onChange={(e) => setTaxRate(parseFloat(e.target.value))}
+                  onChange={(e) => setTaxRate(parseFloat(e.target.value || '0'))}
                   className="w-16 border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <span className="text-sm text-gray-600">%</span>
@@ -406,7 +435,7 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
           </button>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || inventoryLoading}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
           >
             <Calculator className="w-4 h-4" />

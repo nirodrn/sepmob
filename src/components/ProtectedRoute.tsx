@@ -1,7 +1,8 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LoginForm } from './Auth/LoginForm';
 import { UserRole } from '../types';
+import { LoadingSpinner } from './Common/LoadingSpinner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,19 +13,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const { currentUser, userData, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner text="Authenticating..." fullPage />;
   }
 
   if (!currentUser || !userData) {
-    return <LoginForm />;
+    return <Navigate to="/login" replace />;
   }
-
-  // Debug: Log user data to console
-  console.log('Current user data:', userData);
   
   // Check if user has access to sales system roles
   const salesRoles: UserRole[] = [

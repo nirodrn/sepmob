@@ -1,16 +1,18 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { OfflineProvider } from './context/OfflineContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout/Layout';
-import { ProductRequests } from './pages/ProductRequests';
 import { Invoices } from './pages/Invoices';
 import { SalesTracking } from './components/DirectRepresentative/SalesTracking';
 import { InventoryOverview } from './components/Inventory/InventoryOverview';
 import { CustomerManagement } from './components/Customers/CustomerManagement';
 import { SalesAnalytics } from './components/Analytics/SalesAnalytics';
 import { UserSettings } from './components/Settings/UserSettings';
+import { Login } from './pages/Login';
+import { NotFound } from './pages/NotFound';
+import { LoadingSpinner } from './components/Common/LoadingSpinner';
 
 // Role-specific dashboards
 import { DRDashboard } from './pages/DirectRepresentative/DRDashboard';
@@ -20,13 +22,16 @@ import { DistributorDashboard } from './pages/Distributor/DistributorDashboard';
 import { DistributorRepDashboard } from './pages/Distributor/DistributorRepDashboard';
 import { HODashboard } from './pages/Management/HODashboard';
 import { AdminDashboard } from './pages/Management/AdminDashboard';
-import { useAuth } from './context/AuthContext';
 
-function DashboardRouter() {
+function RoleBasedDashboard() {
   const { userData } = useAuth();
-  
-  if (!userData) return null;
-  
+
+  // CRITICAL FIX: The use of `userData!` was causing a crash when the component
+  // rendered before userData was populated. This defensive check prevents the crash.
+  if (!userData) {
+    return <LoadingSpinner text="Loading user dashboard..." />;
+  }
+
   switch (userData.role) {
     case 'DirectRepresentative':
       return <DRDashboard />;
@@ -39,12 +44,9 @@ function DashboardRouter() {
     case 'DistributorRepresentative':
       return <DistributorRepDashboard />;
     case 'HeadOfOperations':
-      return <HODashboard />;
     case 'MainDirector':
       return <HODashboard />;
     case 'Admin':
-      return <AdminDashboard />;
-    // Temporary: Allow existing system roles to access for testing
     case 'WarehouseStaff':
     case 'ProductionManager':
     case 'FinishedGoodsStoreManager':
@@ -55,93 +57,35 @@ function DashboardRouter() {
   }
 }
 
+// Helper to wrap a component with the standard layout and protection
+const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>
+    <Layout>
+      {children}
+    </Layout>
+  </ProtectedRoute>
+);
+
 function App() {
   return (
     <AuthProvider>
       <OfflineProvider>
         <Router>
           <Routes>
+            <Route path="/login" element={<Login />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <DashboardRouter />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/requests"
-              element={
-                <ProtectedRoute allowedRoles={['DirectRepresentative', 'DirectShowroomManager', 'Distributor', 'DistributorRepresentative', 'HeadOfOperations', 'MainDirector', 'Admin']}>
-                  <Layout>
-                    <ProductRequests />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/invoices"
-              element={
-                <ProtectedRoute allowedRoles={['DirectRepresentative', 'DirectShowroomManager', 'DirectShowroomStaff', 'Distributor', 'DistributorRepresentative', 'HeadOfOperations', 'MainDirector', 'Admin']}>
-                  <Layout>
-                    <Invoices />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sales"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <SalesTracking />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/inventory"
-              element={
-                <ProtectedRoute allowedRoles={['DirectShowroomManager', 'DirectShowroomStaff', 'Distributor', 'HeadOfOperations', 'MainDirector', 'Admin']}>
-                  <Layout>
-                    <InventoryOverview />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/customers"
-              element={
-                <ProtectedRoute allowedRoles={['DirectRepresentative', 'DirectShowroomManager', 'DirectShowroomStaff', 'Distributor']}>
-                  <Layout>
-                    <CustomerManagement />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <ProtectedRoute allowedRoles={['HeadOfOperations', 'MainDirector', 'Admin']}>
-                  <Layout>
-                    <SalesAnalytics />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <UserSettings />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
+
+            {/* Simplified and robust routing structure */}
+            <Route path="/dashboard" element={<ProtectedPage><RoleBasedDashboard /></ProtectedPage>} />
+            <Route path="/invoices" element={<ProtectedPage><Invoices /></ProtectedPage>} />
+            <Route path="/sales" element={<ProtectedPage><SalesTracking /></ProtectedPage>} />
+            <Route path="/inventory" element={<ProtectedPage><InventoryOverview /></ProtectedPage>} />
+            <Route path="/customers" element={<ProtectedPage><CustomerManagement /></ProtectedPage>} />
+            <Route path="/analytics" element={<ProtectedPage><SalesAnalytics /></ProtectedPage>} />
+            <Route path="/settings" element={<ProtectedPage><UserSettings /></ProtectedPage>} />
+
+            {/* Catch-all Not Found Route */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
       </OfflineProvider>

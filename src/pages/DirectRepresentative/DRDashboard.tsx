@@ -90,6 +90,7 @@ export function DRDashboard() {
         isOpen={showNewRequest}
         onClose={() => setShowNewRequest(false)}
         onSuccess={handleRequestSuccess}
+        databaseTable="drReqs"
       />
 
       <InvoiceGenerator

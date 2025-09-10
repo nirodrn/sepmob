@@ -6,18 +6,28 @@
         ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'Admin')"
       }
     },
+    "dsReqs": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin' || query.orderByChild == 'requestedById' && query.equalTo == auth.uid)",
+      ".indexOn": ["requestedById"],
+      "$requestId": {
+        ".read": "auth != null && (data.child('requestedById').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin')",
+        ".write": "auth != null && ((!data.exists() && (root.child('users').child(auth.uid).child('role').val() == 'DirectShowroomManager' || root.child('users').child(auth.uid).child('role').val() == 'DirectShowroomStaff')) || (data.exists() && (root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin')))"
+      }
+    },
+    "distributorReqs": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'Distributor' || root.child('users').child(auth.uid).child('role').val() == 'Admin' || query.orderByChild == 'requestedById' && query.equalTo == auth.uid)",
+      ".indexOn": ["requestedById"],
+      "$requestId": {
+        ".read": "auth != null && (data.child('requestedById').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'Distributor' || root.child('users').child(auth.uid).child('role').val() == 'Admin')",
+        ".write": "auth != null && ((!data.exists() && root.child('users').child(auth.uid).child('role').val() == 'DistributorRep') || (data.exists() && root.child('users').child(auth.uid).child('role').val() == 'Distributor'))"
+      }
+    },
     "salesRequests": {
       ".read": "auth != null",
       ".write": "auth != null",
       "$requestId": {
         ".read": "auth != null",
-        ".write": "auth != null && (
-          !data.exists() || 
-          data.child('requestedBy').val() == auth.uid || 
-          root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || 
-          root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || 
-          root.child('users').child(auth.uid).child('role').val() == 'Admin'
-        )"
+        ".write": "auth != null && (!data.exists() || data.child('requestedBy').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin')"
       }
     },
     "invoices": {
@@ -25,13 +35,7 @@
       ".write": "auth != null",
       "$invoiceId": {
         ".read": "auth != null",
-        ".write": "auth != null && (
-          !data.exists() || 
-          data.child('createdBy').val() == auth.uid || 
-          root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || 
-          root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || 
-          root.child('users').child(auth.uid).child('role').val() == 'Admin'
-        )"
+        ".write": "auth != null && (!data.exists() || data.child('createdBy').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin')"
       }
     },
     "customers": {
@@ -47,32 +51,16 @@
       ".write": "auth != null",
       "$invoiceId": {
         ".read": "auth != null",
-        ".write": "auth != null && (
-          !data.exists() || 
-          data.child('createdBy').val() == auth.uid || 
-          root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || 
-          root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || 
-          root.child('users').child(auth.uid).child('role').val() == 'Admin'
-        )"
+        ".write": "auth != null && (!data.exists() || data.child('createdBy').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin')"
       }
     },
     "finishedGoodsPackagedInventory": {
       ".read": "auth != null",
-      ".write": "auth != null && (
-        root.child('users').child(auth.uid).child('role').val() == 'FinishedGoodsStoreManager' || 
-        root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || 
-        root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || 
-        root.child('users').child(auth.uid).child('role').val() == 'Admin'
-      )"
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'FinishedGoodsStoreManager' || root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin')"
     },
     "productionProducts": {
       ".read": "auth != null",
-      ".write": "auth != null && (
-        root.child('users').child(auth.uid).child('role').val() == 'ProductionManager' || 
-        root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || 
-        root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || 
-        root.child('users').child(auth.uid).child('role').val() == 'Admin'
-      )"
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'ProductionManager' || root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || root.child('users').child(auth.uid).child('role').val() == 'Admin')"
     },
     "notifications": {
       "$uid": {

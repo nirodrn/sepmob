@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { DashboardCards, getDashboardCards } from '../../components/Dashboard/DashboardCards';
 import { RecentActivity } from '../../components/Dashboard/RecentActivity';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Settings, BarChart3, Shield, Database, Activity } from 'lucide-react';
+import { Users, Settings, BarChart3, Shield, Database, Activity, FileCheck } from 'lucide-react';
+import { DSRequestApproval } from '../../components/DirectShowroom/DSRequestApproval';
 
 export function AdminDashboard() {
   const { userData } = useAuth();
+  const [showRequestApproval, setShowRequestApproval] = useState(false);
 
   if (!userData) return null;
 
@@ -26,68 +28,83 @@ export function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* System Health */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">System Health</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Database Status</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Online</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Auth Service</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Active</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">API Response</span>
-                  <span className="text-sm text-gray-900">~120ms</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Active Users</span>
-                  <span className="text-sm text-gray-900">47</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent User Activity */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">User Activity</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900">New user registered</p>
-                    <p className="text-xs text-gray-500">2 minutes ago</p>
+          {showRequestApproval ? (
+            <DSRequestApproval />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* System Health */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">System Health</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Database Status</span>
+                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Online</span>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900">Sales request approved</p>
-                    <p className="text-xs text-gray-500">5 minutes ago</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Auth Service</span>
+                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Active</span>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900">System backup completed</p>
-                    <p className="text-xs text-gray-500">1 hour ago</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">API Response</span>
+                    <span className="text-sm text-gray-900">~120ms</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Active Users</span>
+                    <span className="text-sm text-gray-900">47</span>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="mt-6">
-            <RecentActivity activities={[]} />
-          </div>
+              {/* Recent User Activity */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">User Activity</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-900">New user registered</p>
+                      <p className="text-xs text-gray-500">2 minutes ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-900">Sales request approved</p>
+                      <p className="text-xs text-gray-500">5 minutes ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-900">System backup completed</p>
+                      <p className="text-xs text-gray-500">1 hour ago</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="md:col-span-2 mt-6">
+                <RecentActivity activities={[]} />
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Admin Actions</h3>
           
           <div className="space-y-3">
+            <button 
+              onClick={() => setShowRequestApproval(!showRequestApproval)}
+              className="w-full text-left p-3 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg transition-colors">
+              <div className="flex items-center gap-3">
+                <FileCheck className="w-5 h-5 text-cyan-600" />
+                <div>
+                  <p className="font-medium text-cyan-900">{showRequestApproval ? 'Hide' : 'Show'} Request Approvals</p>
+                  <p className="text-sm text-cyan-700">Approve or reject requests</p>
+                </div>
+              </div>
+            </button>
+
             <button className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors">
               <div className="flex items-center gap-3">
                 <Users className="w-5 h-5 text-blue-600" />

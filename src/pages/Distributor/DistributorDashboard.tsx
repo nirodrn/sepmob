@@ -89,6 +89,7 @@ export function DistributorDashboard() {
         isOpen={showNewRequest}
         onClose={() => setShowNewRequest(false)}
         onSuccess={handleRequestSuccess}
+        databaseTable="distributorReqs"
       />
     </div>
   );

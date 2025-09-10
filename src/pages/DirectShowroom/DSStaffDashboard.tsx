@@ -58,8 +58,10 @@ export function DSStaffDashboard() {
               </div>
             </button>
             
-            <button className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors">
+            <button 
               onClick={() => setShowStockView(!showStockView)}
+              className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
+            >
               <div className="flex items-center gap-3">
                 <Eye className="w-5 h-5 text-blue-600" />
                 <div>

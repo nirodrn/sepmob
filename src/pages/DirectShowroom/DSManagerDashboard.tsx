@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { DashboardCards, getDashboardCards } from '../../components/Dashboard/DashboardCards';
-import { RecentActivity } from '../../components/Dashboard/RecentActivity';
 import { NewProductRequest } from '../../components/DirectRepresentative/NewProductRequest';
 import { DSCustomerInvoice } from '../../components/DirectShowroom/DSCustomerInvoice';
 import { DSStockManagement } from '../../components/DirectShowroom/DSStockManagement';
 import { useAuth } from '../../context/AuthContext';
 import { Plus, FileText, Package, Users, Eye } from 'lucide-react';
+import { DSRequestHistory } from '../../components/DirectShowroom/DSRequestHistory';
 
 export function DSManagerDashboard() {
   const { userData } = useAuth();
@@ -43,7 +43,7 @@ export function DSManagerDashboard() {
           {showStockView ? (
             <DSStockManagement />
           ) : (
-            <RecentActivity activities={[]} />
+            <DSRequestHistory />
           )}
         </div>
         
@@ -77,8 +77,9 @@ export function DSManagerDashboard() {
               </div>
             </button>
             
-            <button className="w-full text-left p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors">
+            <button 
               onClick={() => setShowStockView(!showStockView)}
+              className="w-full text-left p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors">
               <div className="flex items-center gap-3">
                 <Eye className="w-5 h-5 text-amber-600" />
                 <div>
@@ -105,6 +106,7 @@ export function DSManagerDashboard() {
         isOpen={showNewRequest}
         onClose={() => setShowNewRequest(false)}
         onSuccess={handleRequestSuccess}
+        databaseTable="dsReqs" // Correctly set the database table
       />
 
       <DSCustomerInvoice

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Plus, Search, Phone, Mail, MapPin, Calendar } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Search, Phone, Mail, MapPin, Calendar, Users, UserCheck, TrendingUp, BarChart } from 'lucide-react';
 import { Modal } from '../Common/Modal';
-import { useFirebaseActions } from '../../hooks/useFirebaseData';
+import { useFirebaseActions, useFirebaseData } from '../../hooks/useFirebaseData';
 import { useAuth } from '../../context/AuthContext';
+import { LoadingSpinner } from '../Common/LoadingSpinner';
+import { ErrorMessage } from '../Common/ErrorMessage';
 
 interface Customer {
   id: string;
@@ -11,7 +13,7 @@ interface Customer {
   email?: string;
   address?: string;
   totalPurchases: number;
-  lastPurchase: number;
+  lastPurchase: number | null;
   status: 'active' | 'inactive';
   createdAt: number;
 }
@@ -19,34 +21,15 @@ interface Customer {
 export function CustomerManagement() {
   const { userData } = useAuth();
   const { addData } = useFirebaseActions();
+  const { data: customersData, loading: customersLoading, error: customersError } = useFirebaseData('customers');
+
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
 
-  // Mock data - replace with real Firebase data
-  const [customers, setCustomers] = useState<Customer[]>([
-    {
-      id: '1',
-      name: 'ABC Store',
-      contact: '+94 77 123 4567',
-      email: 'abc@store.com',
-      address: '123 Main St, Colombo',
-      totalPurchases: 125000,
-      lastPurchase: Date.now() - 86400000,
-      status: 'active',
-      createdAt: Date.now() - 2592000000
-    },
-    {
-      id: '2',
-      name: 'XYZ Mart',
-      contact: '+94 71 987 6543',
-      address: '456 Market Rd, Kandy',
-      totalPurchases: 85000,
-      lastPurchase: Date.now() - 172800000,
-      status: 'active',
-      createdAt: Date.now() - 5184000000
-    }
-  ]);
+  const customers = useMemo(() => 
+    customersData ? Object.entries(customersData).map(([id, data]) => ({ id, ...(data as any) })) : [], 
+  [customersData]);
 
   const [newCustomer, setNewCustomer] = useState({
     name: '',
@@ -65,20 +48,16 @@ export function CustomerManagement() {
     e.preventDefault();
     if (!userData) return;
 
-    setLoading(true);
+    setFormLoading(true);
     try {
-      const customerData = {
+      await addData('customers', {
         ...newCustomer,
         totalPurchases: 0,
         lastPurchase: null,
         status: 'active',
         createdBy: userData.id,
         createdByName: userData.name
-      };
-
-      // In real implementation, save to Firebase
-      const newId = Date.now().toString();
-      setCustomers([...customers, { ...customerData, id: newId, createdAt: Date.now() }]);
+      });
       
       setShowNewCustomer(false);
       setNewCustomer({ name: '', contact: '', email: '', address: '' });
@@ -86,9 +65,12 @@ export function CustomerManagement() {
       console.error('Error adding customer:', error);
       alert('Failed to add customer. Please try again.');
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
+  
+  if (customersLoading) return <LoadingSpinner text="Loading customers..." />;
+  if (customersError) return <ErrorMessage message={customersError} />;
 
   const getStatusBadge = (status: string) => {
     const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium';
@@ -122,8 +104,8 @@ export function CustomerManagement() {
               <p className="text-sm font-medium text-gray-600">Total Customers</p>
               <p className="text-2xl font-bold text-gray-900 mt-2">{customers.length}</p>
             </div>
-            <div className="p-3 rounded-full bg-blue-500">
-              <Phone className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-full bg-blue-100">
+              <Users className="w-6 h-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -136,8 +118,8 @@ export function CustomerManagement() {
                 {customers.filter(c => c.status === 'active').length}
               </p>
             </div>
-            <div className="p-3 rounded-full bg-green-500">
-              <Phone className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-full bg-green-100">
+              <UserCheck className="w-6 h-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -150,8 +132,8 @@ export function CustomerManagement() {
                 LKR {customers.reduce((sum, c) => sum + c.totalPurchases, 0).toLocaleString()}
               </p>
             </div>
-            <div className="p-3 rounded-full bg-purple-500">
-              <Phone className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-full bg-purple-100">
+              <TrendingUp className="w-6 h-6 text-purple-600" />
             </div>
           </div>
         </div>
@@ -164,8 +146,8 @@ export function CustomerManagement() {
                 LKR {customers.length > 0 ? Math.round(customers.reduce((sum, c) => sum + c.totalPurchases, 0) / customers.length).toLocaleString() : 0}
               </p>
             </div>
-            <div className="p-3 rounded-full bg-amber-500">
-              <Phone className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-full bg-amber-100">
+              <BarChart className="w-6 h-6 text-amber-600" />
             </div>
           </div>
         </div>
@@ -327,10 +309,10 @@ export function CustomerManagement() {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={formLoading}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? 'Adding...' : 'Add Customer'}
+              {formLoading ? 'Adding...' : 'Add Customer'}
             </button>
           </div>
         </form>

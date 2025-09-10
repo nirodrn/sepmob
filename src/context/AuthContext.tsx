@@ -28,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await auth.signOut();
+    // State will be cleared by onAuthStateChanged listener
   };
 
   useEffect(() => {
@@ -51,21 +52,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               createdAt: data.createdAt
             });
           } else {
-            console.error('User data not found in database');
+            console.error('Authentication error: User data not found in database.');
             setUserData(null);
           }
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          console.error('Firebase error: Could not fetch user data.', error);
           setUserData(null);
         }
+        // Set loading to false only after attempting to fetch and set user data.
+        setLoading(false);
       } else {
+        // If there is no user, clear user data and stop loading.
         setUserData(null);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
-    return unsubscribe;
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   const value = {
@@ -75,6 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut
   };
 
+  // Render children only when not loading, or let ProtectedRoute handle it.
+  // It's better to always render and let consumers decide what to do with the loading state.
   return (
     <AuthContext.Provider value={value}>
       {children}
