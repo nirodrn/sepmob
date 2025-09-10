@@ -1,0 +1,86 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'Admin' || root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || root.child('users').child(auth.uid).child('role').val() == 'MainDirector')",
+        ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'Admin')"
+      }
+    },
+    "salesRequests": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$requestId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (
+          !data.exists() || 
+          data.child('requestedBy').val() == auth.uid || 
+          root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || 
+          root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || 
+          root.child('users').child(auth.uid).child('role').val() == 'Admin'
+        )"
+      }
+    },
+    "invoices": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$invoiceId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (
+          !data.exists() || 
+          data.child('createdBy').val() == auth.uid || 
+          root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || 
+          root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || 
+          root.child('users').child(auth.uid).child('role').val() == 'Admin'
+        )"
+      }
+    },
+    "customers": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "salesActivities": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "customerInvoices": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$invoiceId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (
+          !data.exists() || 
+          data.child('createdBy').val() == auth.uid || 
+          root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || 
+          root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || 
+          root.child('users').child(auth.uid).child('role').val() == 'Admin'
+        )"
+      }
+    },
+    "finishedGoodsPackagedInventory": {
+      ".read": "auth != null",
+      ".write": "auth != null && (
+        root.child('users').child(auth.uid).child('role').val() == 'FinishedGoodsStoreManager' || 
+        root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || 
+        root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || 
+        root.child('users').child(auth.uid).child('role').val() == 'Admin'
+      )"
+    },
+    "productionProducts": {
+      ".read": "auth != null",
+      ".write": "auth != null && (
+        root.child('users').child(auth.uid).child('role').val() == 'ProductionManager' || 
+        root.child('users').child(auth.uid).child('role').val() == 'HeadOfOperations' || 
+        root.child('users').child(auth.uid).child('role').val() == 'MainDirector' || 
+        root.child('users').child(auth.uid).child('role').val() == 'Admin'
+      )"
+    },
+    "notifications": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null"
+      }
+    },
+    ".read": "auth != null",
+    ".write": "auth != null"
+  }
+}
