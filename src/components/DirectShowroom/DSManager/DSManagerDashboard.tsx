@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DashboardCards, getDashboardCards } from '../Dashboard/DashboardCards';
+import { DashboardCards, getDashboardCards } from '../../Dashboard/DashboardCards';
 import { DSCustomerInvoice } from './DSCustomerInvoice';
 import { DSStockManagement } from './DSStockManagement';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 import { FileText, Package, Users, Eye, FileCheck, Search } from 'lucide-react';
 
 export function DSManagerDashboard() {
@@ -42,7 +42,7 @@ export function DSManagerDashboard() {
           
           <div className="space-y-3">
             <Link
-              to="/direct-showroom/requests"
+              to="requests"
               className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors block"
             >
               <div className="flex items-center gap-3">

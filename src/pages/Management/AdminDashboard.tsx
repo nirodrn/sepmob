@@ -3,7 +3,7 @@ import { DashboardCards, getDashboardCards } from '../../components/Dashboard/Da
 import { RecentActivity } from '../../components/Dashboard/RecentActivity';
 import { useAuth } from '../../context/AuthContext';
 import { Users, Settings, BarChart3, Shield, Database, Activity, FileCheck } from 'lucide-react';
-import { DSRequestApproval } from '../../components/DirectShowroom/DSRequestApproval';
+import { DSRequestApproval } from '../../components/DirectShowroom/DSManager/DSRequestApproval';
 
 export function AdminDashboard() {
   const { userData } = useAuth();
@@ -45,7 +45,7 @@ export function AdminDashboard() {
                     <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Active</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">API Response</span>
+                    <span className="text-sm text-gray-900">API Response</span>
                     <span className="text-sm text-gray-900">~120ms</span>
                   </div>
                   <div className="flex justify-between items-center">

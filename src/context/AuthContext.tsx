@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { User as FirebaseUser, onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { ref, get } from 'firebase/database';
 import { auth, database } from '../config/firebase';
 import { User } from '../types';
@@ -8,6 +8,7 @@ interface AuthContextType {
   currentUser: FirebaseUser | null;
   userData: User | null;
   loading: boolean;
+  signIn: (email: string, pass: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -26,20 +27,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const signOut = async () => {
-    await auth.signOut();
-    // State will be cleared by onAuthStateChanged listener
-  };
+  const signIn = useCallback(async (email: string, pass: string) => {
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged will handle the rest
+    } catch (error) {
+      console.error('Sign in failed', error);
+      setLoading(false); // Ensure loading is false on failure
+      throw error; // Re-throw to be caught in the UI
+    }
+  }, []);
+
+  const signOut = useCallback(async () => {
+    setLoading(true);
+    try {
+        await firebaseSignOut(auth);
+        // onAuthStateChanged will clear user data
+    } catch (error) {
+        console.error('Sign out failed', error);
+        // Still need to turn off loading state
+        setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
       setCurrentUser(user);
-      
       if (user) {
         try {
           const userRef = ref(database, `users/${user.uid}`);
           const snapshot = await get(userRef);
-          
           if (snapshot.exists()) {
             const data = snapshot.val();
             setUserData({
@@ -58,17 +77,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (error) {
           console.error('Firebase error: Could not fetch user data.', error);
           setUserData(null);
-        }
-        // Set loading to false only after attempting to fetch and set user data.
-        setLoading(false);
+        } 
       } else {
-        // If there is no user, clear user data and stop loading.
         setUserData(null);
-        setLoading(false);
       }
+      setLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
@@ -76,14 +91,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     currentUser,
     userData,
     loading,
+    signIn,
     signOut
   };
 
-  // Render children only when not loading, or let ProtectedRoute handle it.
-  // It's better to always render and let consumers decide what to do with the loading state.
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 }

@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Calculator, User, Phone, MapPin } from 'lucide-react';
-import { Modal } from '../Common/Modal';
-import { useFirebaseActions, useFirebaseData } from '../../hooks/useFirebaseData';
-import { useAuth } from '../../context/AuthContext';
-import { InvoiceItem } from '../../types';
-import { ErrorMessage } from '../Common/ErrorMessage';
+import { Modal } from '../../Common/Modal';
+import { useFirebaseActions, useFirebaseData } from '../../../hooks/useFirebaseData';
+import { useAuth } from '../../../context/AuthContext';
+import { InvoiceItem } from '../../../types';
+import { ErrorMessage } from '../../Common/ErrorMessage';
 
 interface DSCustomerInvoiceProps {
   isOpen: boolean;
@@ -14,7 +14,8 @@ interface DSCustomerInvoiceProps {
 
 export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvoiceProps) {
   const { userData } = useAuth();
-  const { addData, updateData } = useFirebaseActions();
+  // Correctly scope actions to a base path
+  const { addData, updateData } = useFirebaseActions('customerInvoices');
   const { data: inventoryData, loading: inventoryLoading, error: inventoryError } = useFirebaseData('finishedGoodsPackagedInventory');
 
   const [loading, setLoading] = useState(false);
@@ -55,20 +56,21 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
     if (field === 'productId') {
       const product = productsArray.find(p => p.id === value);
       if (product) {
-        currentItem.productName = product.name;
-        currentItem.unit = product.unit;
-        currentItem.unitPrice = product.price;
-        if (currentItem.quantity > product.stock) {
-          currentItem.quantity = product.stock;
+        // Corrected field names: productName, unitsInStock, productPrice
+        currentItem.productName = product.productName;
+        currentItem.unit = product.unit || 'units';
+        currentItem.unitPrice = product.productPrice || 0;
+        if (currentItem.quantity > product.unitsInStock) {
+          currentItem.quantity = product.unitsInStock;
         }
       }
     }
 
     if (field === 'quantity') {
         const product = productsArray.find(p => p.id === currentItem.productId);
-        if (product && value > product.stock) {
-            alert(`Maximum stock available is ${product.stock}`);
-            currentItem.quantity = product.stock;
+        if (product && value > product.unitsInStock) {
+            alert(`Maximum stock available is ${product.unitsInStock}`);
+            currentItem.quantity = product.unitsInStock;
         } else {
             currentItem.quantity = value;
         }
@@ -121,8 +123,8 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
       // Stock validation
       for (const item of validItems) {
         const product = productsArray.find(p => p.id === item.productId);
-        if (!product || item.quantity > product.stock) {
-          alert(`Not enough stock for ${item.productName}. Available: ${product ? product.stock : 0}, Requested: ${item.quantity}`);
+        if (!product || item.quantity > product.unitsInStock) {
+          alert(`Not enough stock for ${item.productName}. Available: ${product ? product.unitsInStock : 0}, Requested: ${item.quantity}`);
           setLoading(false);
           return;
         }
@@ -132,7 +134,7 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
       const invoiceNumber = generateInvoiceNumber();
       const dueDate = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days from now
 
-      const invoiceId = await addData('customerInvoices', {
+      const invoiceId = await addData('', {
         invoiceNumber,
         invoiceType: 'customer_sale',
         createdBy: userData.id,
@@ -156,7 +158,9 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
         notes: notes.trim()
       });
 
-      await addData('salesActivities', {
+      // Use a separate actions hook for sales activities
+      const salesActions = useFirebaseActions('salesActivities');
+      await salesActions.addData('', {
         type: 'customer_sale',
         userId: userData.id,
         userName: userData.name,
@@ -168,11 +172,12 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
         relatedId: invoiceId
       });
 
-      // Update stock
+      // Use a separate actions hook for inventory updates
+      const inventoryActions = useFirebaseActions('finishedGoodsPackagedInventory');
       const stockUpdatePromises = validItems.map(item => {
         const product = productsArray.find(p => p.id === item.productId);
-        const newStock = (product?.stock || 0) - item.quantity;
-        return updateData(`finishedGoodsPackagedInventory/${item.productId}`, { stock: newStock });
+        const newStock = (product?.unitsInStock || 0) - item.quantity;
+        return inventoryActions.updateData(item.productId, { unitsInStock: newStock });
       });
       await Promise.all(stockUpdatePromises);
 
@@ -283,8 +288,8 @@ export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvo
                   >
                     <option value="">{inventoryLoading ? 'Loading...' : 'Select Product'}</option>
                     {productsArray.map(product => (
-                      <option key={product.id} value={product.id} disabled={product.stock <= 0}>
-                        {product.name} (Stock: {product.stock})
+                      <option key={product.id} value={product.id} disabled={product.unitsInStock <= 0}>
+                        {product.productName} (Stock: {product.unitsInStock})
                       </option>
                     ))}
                   </select>

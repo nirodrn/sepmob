@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
 import { Package, AlertTriangle, Search, Filter, Eye } from 'lucide-react';
-import { useFirebaseData } from '../../hooks/useFirebaseData';
-import { LoadingSpinner } from '../Common/LoadingSpinner';
-import { ErrorMessage } from '../Common/ErrorMessage';
+import { useFirebaseData } from '../../../hooks/useFirebaseData';
+import { LoadingSpinner } from '../../Common/LoadingSpinner';
+import { ErrorMessage } from '../../Common/ErrorMessage';
 
 export function DSStockManagement() {
-  const { data: inventory, loading, error } = useFirebaseData('finishedGoodsPackagedInventory');
+  const { data: inventoryData, loading, error } = useFirebaseData('finishedGoodsPackagedInventory');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('all');
 
   if (loading) return <LoadingSpinner text="Loading stock levels..." />;
-  if (error) return <ErrorMessage message={error} />;
+  // CRITICAL FIX: The error object itself cannot be rendered. This now passes a string.
+  if (error) return <ErrorMessage message={error.message || 'Failed to load stock data.'} />;
 
-  // CRITICAL FIX: Ensure inventory is a processable object before mapping.
-  const inventoryArray = (inventory && typeof inventory === 'object')
-    ? Object.entries(inventory).map(([id, data]) => ({ id, ...(data as object) }))
-    : [];
+  // Defensively render loading and error states first.
+  const inventoryArray = inventoryData
+  ? Object.entries(inventoryData).map(([id, data]) => ({ id, ...(data as object) }))
+  : [];
   
   // Filter for DS-relevant stock (showroom locations)
   const dsStock = inventoryArray.filter(item => 

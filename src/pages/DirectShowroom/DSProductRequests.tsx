@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { DSNewRequest } from '../../components/DirectShowroom/DSNewRequest';
-import { DSRequestHistory } from '../../components/DirectShowroom/DSRequestHistory';
+import { DSNewRequest } from '../../components/DirectShowroom/DSManager/DSNewRequest';
+import { DSRequestHistory } from '../../components/DirectShowroom/DSManager/DSRequestHistory';
 import { Plus } from 'lucide-react';
 
 export function DSProductRequests() {

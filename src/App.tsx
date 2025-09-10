@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OfflineProvider } from './context/OfflineContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -19,12 +19,14 @@ import { RequestTracker } from './pages/Tracking/RequestTracker';
 
 // Role-specific dashboards
 import { DRDashboard } from './pages/DirectRepresentative/DRDashboard';
-import { DSManagerDashboard } from './pages/DirectShowroom/DSManagerDashboard';
-import { DSStaffDashboard } from './pages/DirectShowroom/DSStaffDashboard';
+import { DSManagerDashboard } from './components/DirectShowroom/DSManager/DSManagerDashboard';
+import { DSStaffDashboard } from './components/DirectShowroom/DSStaff/DSStaffDashboard';
 import { DistributorDashboard } from './pages/Distributor/DistributorDashboard';
 import { DistributorRepDashboard } from './pages/Distributor/DistributorRepDashboard';
 import { HODashboard } from './pages/Management/HODashboard';
 import { AdminDashboard } from './pages/Management/AdminDashboard';
+import { DSRequestApproval } from './components/DirectShowroom/DSManager/DSRequestApproval';
+import { DSRequestHistory } from './components/DirectShowroom/DSManager/DSRequestHistory';
 
 function RoleBasedDashboard() {
   const { userData } = useAuth();
@@ -37,7 +39,7 @@ function RoleBasedDashboard() {
     case 'DirectRepresentative':
       return <DRDashboard />;
     case 'DirectShowroomManager':
-      return <DSManagerDashboard />;
+      return <Navigate to="/direct-showroom" replace />;
     case 'DirectShowroomStaff':
       return <DSStaffDashboard />;
     case 'Distributor':
@@ -82,9 +84,16 @@ function App() {
             <Route path="/customers" element={<ProtectedPage><CustomerManagement /></ProtectedPage>} />
             <Route path="/analytics" element={<ProtectedPage><SalesAnalytics /></ProtectedPage>} />
             <Route path="/settings" element={<ProtectedPage><UserSettings /></ProtectedPage>} />
-            <Route path="/direct-showroom/requests" element={<ProtectedPage><DSProductRequests /></ProtectedPage>} />
             <Route path="/ho/product-requests" element={<ProtectedPage><HOProductRequests /></ProtectedPage>} />
+            <Route path="/requests" element={<ProtectedPage><RequestTracker /></ProtectedPage>} />
             <Route path="/track-requests" element={<ProtectedPage><RequestTracker /></ProtectedPage>} />
+
+            <Route path="/direct-showroom" element={<ProtectedPage><Outlet /></ProtectedPage>}>
+                <Route index element={<DSManagerDashboard />} />
+                <Route path="requests" element={<DSProductRequests />} />
+                <Route path="requests/approval" element={<DSRequestApproval />} />
+                <Route path="requests/history" element={<DSRequestHistory />} />
+            </Route>
 
             <Route path="*" element={<NotFound />} />
           </Routes>

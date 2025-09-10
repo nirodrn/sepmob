@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { DashboardCards, getDashboardCards } from '../../components/Dashboard/DashboardCards';
-import { RecentActivity } from '../../components/Dashboard/RecentActivity';
-import { DSCustomerInvoice } from '../../components/DirectShowroom/DSCustomerInvoice';
-import { DSStockManagement } from '../../components/DirectShowroom/DSStockManagement';
-import { useAuth } from '../../context/AuthContext';
+import { DashboardCards, getDashboardCards } from '../../Dashboard/DashboardCards';
+import { RecentActivity } from '../../Dashboard/RecentActivity';
+import { DSCustomerInvoice } from '../DSManager/DSCustomerInvoice';
+import { DSStockManagement } from '../DSManager/DSStockManagement';
+import { useAuth } from '../../../context/AuthContext';
 import { FileText, Package, Eye } from 'lucide-react';
 
 export function DSStaffDashboard() {
@@ -33,12 +33,9 @@ export function DSStaffDashboard() {
       <DashboardCards cards={cards} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          {showStockView ? (
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Showroom Stock</h3>
             <DSStockManagement />
-          ) : (
-            <RecentActivity activities={[]} />
-          )}
         </div>
         
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
