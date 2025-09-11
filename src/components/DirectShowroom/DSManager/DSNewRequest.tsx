@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { format } from 'date-fns';
 import { useAuth } from '../../../context/AuthContext';
 import { useFirebaseActions, useFirebaseData } from '../../../hooks/useFirebaseData';
 import { Modal } from '../../Common/Modal';
@@ -21,7 +22,7 @@ interface RequestItem {
 
 export function DSNewRequest({ isOpen, onClose, onSuccess }: DSNewRequestProps) {
   const { userData } = useAuth();
-  const { addData } = useFirebaseActions('dsreqs');
+  const { setData } = useFirebaseActions('dsreqs');
   const { data: inventoryData, loading: inventoryLoading, error: inventoryError } = useFirebaseData('finishedGoodsPackagedInventory');
 
   const [loading, setLoading] = useState(false);
@@ -75,19 +76,30 @@ export function DSNewRequest({ isOpen, onClose, onSuccess }: DSNewRequestProps) 
     setLoading(true);
 
     try {
-      const customId = `DSR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const requestPromises = items.map(item => {
+            const { productName, quantity, urgent } = item;
+            
+            const formattedDate = format(new Date(), 'ddMMyy');
+            const randomNo = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            const variant = (productName.split(' - ')[1] || '').replace(/\s+/g, '');
 
-      const requestData = {
-        customId: customId,
-        requestedBy: userData.id,
-        requestedByName: userData.name || 'N/A',
-        requestedAt: new Date().toISOString(),
-        status: 'pending',
-        items: items.filter(item => item.productId),
-        notes,
-      };
+            const id = `${formattedDate}-${randomNo}-${variant}`;
+            
+            const requestData = {
+                id,
+                product: productName,
+                quantity,
+                status: 'pending',
+                date: new Date().toISOString(),
+                urgent,
+                requestedBy: userData.id,
+                requestedByName: userData.name || 'N/A',
+                notes,
+            };
+            return setData(id, requestData);
+        });
 
-      await addData('', requestData);
+      await Promise.all(requestPromises);
       
       onSuccess();
       onClose();

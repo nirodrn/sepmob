@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { DashboardCards, getDashboardCards } from '../../Dashboard/DashboardCards';
 import { RecentActivity } from '../../Dashboard/RecentActivity';
-import { DSCustomerInvoice } from '../DSManager/DSCustomerInvoice';
+import DSCustomerInvoice from '../DSManager/DSCustomerInvoice';
 import { DSStockManagement } from '../DSManager/DSStockManagement';
 import { useAuth } from '../../../context/AuthContext';
 import { FileText, Package, Eye } from 'lucide-react';

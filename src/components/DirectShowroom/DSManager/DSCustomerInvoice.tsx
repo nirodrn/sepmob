@@ -1,10 +1,24 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Calculator, User, Phone, MapPin } from 'lucide-react';
-import { Modal } from '../../Common/Modal';
-import { useFirebaseActions, useFirebaseData } from '../../../hooks/useFirebaseData';
-import { useAuth } from '../../../context/AuthContext';
-import { InvoiceItem } from '../../../types';
-import { ErrorMessage } from '../../Common/ErrorMessage';
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, X } from 'lucide-react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../../config/firebase';
+
+interface Item {
+  p: string; // Product Name
+  q: number; // Quantity
+  u: number; // Unit Price
+  t: number; // Total
+}
+
+interface Invoice {
+  id: string;
+  date: string;
+  customer: string;
+  items: Item[];
+  total: number;
+  pay: 'cash' | 'card' | 'credit';
+  status: 'paid' | 'unpaid';
+}
 
 interface DSCustomerInvoiceProps {
   isOpen: boolean;
@@ -12,442 +26,300 @@ interface DSCustomerInvoiceProps {
   onSuccess: () => void;
 }
 
-export function DSCustomerInvoice({ isOpen, onClose, onSuccess }: DSCustomerInvoiceProps) {
-  const { userData } = useAuth();
-  // Correctly scope actions to a base path
-  const { addData, updateData } = useFirebaseActions('customerInvoices');
-  const { data: inventoryData, loading: inventoryLoading, error: inventoryError } = useFirebaseData('finishedGoodsPackagedInventory');
+const DSCustomerInvoice: React.FC<DSCustomerInvoiceProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [invoiceId, setInvoiceId] = useState('');
+  const [customerName, setCustomerName] = useState('Walk-in');
+  const [items, setItems] = useState<Item[]>([]);
+  const [productName, setProductName] = useState('');
+  const [quantity, setQuantity] = useState<number | ''>('');
+  const [unitPrice, setUnitPrice] = useState<number | ''>('');
+  const [total, setTotal] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'credit'>('cash');
+  const [status, setStatus] = useState<'paid' | 'unpaid'>('paid');
 
-  const [loading, setLoading] = useState(false);
-  
-  const [customerInfo, setCustomerInfo] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    email: ''
-  });
-  
-  const [items, setItems] = useState<InvoiceItem[]>([
-    { productId: '', productName: '', quantity: 1, unit: 'units', unitPrice: 0, total: 0 }
-  ]);
-  
-  const [taxRate, setTaxRate] = useState(10);
-  const [discount, setDiscount] = useState(0);
-  const [notes, setNotes] = useState('');
+  useEffect(() => {
+    if (isOpen) {
+      generateInvoiceId();
+    }
+  }, [isOpen]);
 
-  const productsArray = useMemo(() => 
-    inventoryData ? Object.entries(inventoryData).map(([id, data]) => ({ id, ...(data as any) })) : [],
-  [inventoryData]);
+  useEffect(() => {
+    calculateTotal();
+  }, [items]);
+
+  const generateInvoiceId = () => {
+    const date = new Date();
+    const formattedDate = `${date.getDate().toString().padStart(2, '0')}${(date.getMonth() + 1)
+      .toString()
+      .padStart(2, '0')}${date.getFullYear().toString().slice(-2)}`;
+    const randomNum = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, '0');
+    setInvoiceId(`INV-${formattedDate}-${randomNum}`);
+  };
 
   const addItem = () => {
-    setItems([...items, { productId: '', productName: '', quantity: 1, unit: 'units', unitPrice: 0, total: 0 }]);
+    if (productName && quantity && unitPrice) {
+      const newItem: Item = {
+        p: productName,
+        q: Number(quantity),
+        u: Number(unitPrice),
+        t: Number(quantity) * Number(unitPrice),
+      };
+      setItems([...items, newItem]);
+      setProductName('');
+      setQuantity('');
+      setUnitPrice('');
+    }
   };
 
   const removeItem = (index: number) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
-    }
+    const newItems = [...items];
+    newItems.splice(index, 1);
+    setItems(newItems);
   };
 
-  const updateItem = (index: number, field: keyof InvoiceItem, value: any) => {
-    const updatedItems = [...items];
-    const currentItem = { ...updatedItems[index], [field]: value };
+  const calculateTotal = () => {
+    const totalAmount = items.reduce((acc, item) => acc + item.t, 0);
+    setTotal(totalAmount);
+  };
 
-    if (field === 'productId') {
-      const product = productsArray.find(p => p.id === value);
-      if (product) {
-        // Corrected field names: productName, unitsInStock, productPrice
-        currentItem.productName = product.productName;
-        currentItem.unit = product.unit || 'units';
-        currentItem.unitPrice = product.productPrice || 0;
-        if (currentItem.quantity > product.unitsInStock) {
-          currentItem.quantity = product.unitsInStock;
-        }
-      }
+  const saveInvoice = async () => {
+    if (items.length === 0) {
+      alert('Please add items to the invoice.');
+      return;
     }
 
-    if (field === 'quantity') {
-        const product = productsArray.find(p => p.id === currentItem.productId);
-        if (product && value > product.unitsInStock) {
-            alert(`Maximum stock available is ${product.unitsInStock}`);
-            currentItem.quantity = product.unitsInStock;
-        } else {
-            currentItem.quantity = value;
-        }
-    }
-    
-    currentItem.total = currentItem.quantity * currentItem.unitPrice;
-    updatedItems[index] = currentItem;
-    
-    setItems(updatedItems);
-  };
+    const invoiceData: Omit<Invoice, 'id'> = {
+      date: new Date().toISOString(),
+      customer: customerName,
+      items,
+      total,
+      pay: paymentMethod,
+      status,
+    };
 
-  const calculateTotals = () => {
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const discountAmount = (subtotal * discount) / 100;
-    const afterDiscount = subtotal - discountAmount;
-    const tax = (afterDiscount * taxRate) / 100;
-    const total = afterDiscount + tax;
-    return { subtotal, discountAmount, afterDiscount, tax, total };
-  };
-
-  const generateInvoiceNumber = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const time = String(date.getTime()).slice(-4);
-    return `DS-INV-${year}${month}${day}-${time}`;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userData) return;
-
-    setLoading(true);
     try {
-      const validItems = items.filter(item => item.productId && item.quantity > 0);
-      
-      if (validItems.length === 0) {
-        alert('Please add at least one valid product');
-        setLoading(false);
-        return;
-      }
-
-      if (!customerInfo.name.trim()) {
-        alert('Please enter customer name');
-        setLoading(false);
-        return;
-      }
-      
-      // Stock validation
-      for (const item of validItems) {
-        const product = productsArray.find(p => p.id === item.productId);
-        if (!product || item.quantity > product.unitsInStock) {
-          alert(`Not enough stock for ${item.productName}. Available: ${product ? product.unitsInStock : 0}, Requested: ${item.quantity}`);
-          setLoading(false);
-          return;
-        }
-      }
-
-      const { subtotal, discountAmount, tax, total } = calculateTotals();
-      const invoiceNumber = generateInvoiceNumber();
-      const dueDate = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days from now
-
-      const invoiceId = await addData('', {
-        invoiceNumber,
-        invoiceType: 'customer_sale',
-        createdBy: userData.id,
-        createdByName: userData.name,
-        createdByRole: userData.role,
-        showroomLocation: userData.department,
-        customer: customerInfo,
-        items: validItems,
-        subtotal,
-        discount,
-        discountAmount,
-        tax,
-        taxRate,
-        total,
-        status: 'completed',
-        paymentStatus: 'paid',
-        paymentMethod: 'cash',
-        totalPaid: total,
-        remainingAmount: 0,
-        dueDate,
-        notes: notes.trim()
+      const docRef = await addDoc(collection(db, 'dsinvoices'), {
+        ...invoiceData,
+        id: invoiceId,
+        createdAt: serverTimestamp(),
       });
-
-      // Use a separate actions hook for sales activities
-      const salesActions = useFirebaseActions('salesActivities');
-      await salesActions.addData('', {
-        type: 'customer_sale',
-        userId: userData.id,
-        userName: userData.name,
-        userRole: userData.role,
-        description: `Customer sale invoice ${invoiceNumber} generated for ${customerInfo.name}`,
-        amount: total,
-        customerName: customerInfo.name,
-        invoiceNumber,
-        relatedId: invoiceId
-      });
-
-      // Use a separate actions hook for inventory updates
-      const inventoryActions = useFirebaseActions('finishedGoodsPackagedInventory');
-      const stockUpdatePromises = validItems.map(item => {
-        const product = productsArray.find(p => p.id === item.productId);
-        const newStock = (product?.unitsInStock || 0) - item.quantity;
-        return inventoryActions.updateData(item.productId, { unitsInStock: newStock });
-      });
-      await Promise.all(stockUpdatePromises);
-
+      console.log('Invoice saved with ID: ', docRef.id);
+      alert(`Invoice ${invoiceId} saved successfully!`);
       onSuccess();
+      resetInvoice();
       onClose();
-      
-      // Reset form
-      setCustomerInfo({ name: '', phone: '', address: '', email: '' });
-      setItems([{ productId: '', productName: '', quantity: 1, unit: 'units', unitPrice: 0, total: 0 }]);
-      setNotes('');
-      setDiscount(0);
     } catch (error) {
-      console.error('Error creating customer invoice:', error);
-      alert('Failed to create invoice. Please try again.');
-    } finally {
-      setLoading(false);
+      console.error('Error saving invoice: ', error);
+      alert('Failed to save invoice. Please try again.');
     }
   };
 
-  const { subtotal, discountAmount, tax, total } = calculateTotals();
+  const resetInvoice = () => {
+    generateInvoiceId();
+    setCustomerName('Walk-in');
+    setItems([]);
+    setProductName('');
+    setQuantity('');
+    setUnitPrice('');
+    setTotal(0);
+    setPaymentMethod('cash');
+    setStatus('paid');
+  };
+
+  if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Customer Invoice" size="xl">
-        {inventoryError && <ErrorMessage message="Failed to load product inventory."/>}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Customer Information
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Customer Name *
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-800">POS Invoice</h1>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {/* Invoice Header */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="form-group">
+              <label className="text-sm font-medium text-gray-600">Invoice ID</label>
+              <p className="text-lg font-semibold text-gray-800">{invoiceId}</p>
+            </div>
+            <div className="form-group">
+              <label className="text-sm font-medium text-gray-600">Date & Time</label>
+              <p className="text-lg font-semibold text-gray-800">{new Date().toLocaleString()}</p>
+            </div>
+            <div className="form-group">
+              <label htmlFor="customerName" className="text-sm font-medium text-gray-600">
+                Customer
               </label>
               <input
                 type="text"
-                value={customerInfo.name}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
+                id="customerName"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
-              </label>
-              <div className="relative">
-                <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+          {/* Item Entry */}
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <h2 className="text-lg font-semibold text-gray-700 mb-4">Add Item</h2>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+              <div className="md:col-span-2">
+                <label htmlFor="productName" className="text-sm font-medium text-gray-600">
+                  Product Name
+                </label>
                 <input
-                  type="tel"
-                  value={customerInfo.phone}
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="+94 77 123 4567"
+                  type="text"
+                  id="productName"
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  placeholder="E.g., Product A"
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Address
-              </label>
-              <div className="relative">
-                <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-                <textarea
-                  value={customerInfo.address}
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
-                  rows={2}
-                  className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Customer address"
+              <div>
+                <label htmlFor="quantity" className="text-sm font-medium text-gray-600">
+                  Quantity
+                </label>
+                <input
+                  type="number"
+                  id="quantity"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  placeholder="0"
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+              <div>
+                <label htmlFor="unitPrice" className="text-sm font-medium text-gray-600">
+                  Unit Price
+                </label>
+                <input
+                  type="number"
+                  id="unitPrice"
+                  value={unitPrice}
+                  onChange={(e) => setUnitPrice(Number(e.target.value))}
+                  placeholder="0.00"
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                onClick={addItem}
+                className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center justify-center h-10 mt-1"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="ml-2">Add</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Item List */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">Invoice Items</h3>
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3 text-left text-sm font-medium text-gray-600">Product</th>
+                    <th className="p-3 text-left text-sm font-medium text-gray-600">Quantity</th>
+                    <th className="p-3 text-left text-sm font-medium text-gray-600">Unit Price</th>
+                    <th className="p-3 text-left text-sm font-medium text-gray-600">Total</th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-600">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, index) => (
+                    <tr key={index} className="border-b border-gray-200">
+                      <td className="p-3">{item.p}</td>
+                      <td className="p-3">{item.q}</td>
+                      <td className="p-3">LKR {item.u.toFixed(2)}</td>
+                      <td className="p-3">LKR {item.t.toFixed(2)}</td>
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() => removeItem(index)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {items.length === 0 && (
+                <p className="text-center p-4 text-gray-500">No items added yet.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div className="form-group mb-4">
+                <label htmlFor="paymentMethod" className="text-sm font-medium text-gray-600">
+                  Payment Method
+                </label>
+                <select
+                  id="paymentMethod"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'credit')}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="credit">Credit</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="status" className="text-sm font-medium text-gray-600">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as 'paid' | 'unpaid')}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="paid">Paid</option>
+                  <option value="unpaid">Unpaid</option>
+                </select>
+              </div>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col justify-center">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-lg text-gray-600">Total</span>
+                <span className="text-2xl font-bold text-blue-600">LKR {total.toFixed(2)}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <label className="block text-sm font-medium text-gray-700">
-              Invoice Items
-            </label>
+        <div className="p-6 border-t border-gray-200 sticky bottom-0 bg-white z-10">
+          <div className="flex justify-end gap-4">
             <button
-              type="button"
-              onClick={addItem}
-              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
-              <Plus className="w-4 h-4" />
-              Add Item
+              Cancel
+            </button>
+            <button
+              onClick={saveInvoice}
+              className="bg-green-600 text-white px-8 py-2 rounded-lg hover:bg-green-700 font-semibold"
+            >
+              Save Invoice
             </button>
           </div>
-
-          <div className="space-y-4">
-            {items.map((item, index) => (
-              <div key={index} className="flex gap-4 items-end p-4 border border-gray-200 rounded-lg">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Product
-                  </label>
-                  <select
-                    value={item.productId}
-                    onChange={(e) => updateItem(index, 'productId', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                    disabled={inventoryLoading}
-                  >
-                    <option value="">{inventoryLoading ? 'Loading...' : 'Select Product'}</option>
-                    {productsArray.map(product => (
-                      <option key={product.id} value={product.id} disabled={product.unitsInStock <= 0}>
-                        {product.productName} (Stock: {product.unitsInStock})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="w-20">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Qty
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-
-                <div className="w-20">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unit
-                  </label>
-                  <input
-                    type="text"
-                    value={item.unit}
-                    readOnly
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50"
-                  />
-                </div>
-
-                <div className="w-24">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unit Price
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.unitPrice}
-                    onChange={(e) => updateItem(index, 'unitPrice', parseFloat(e.target.value))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-
-                <div className="w-24">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Total
-                  </label>
-                  <input
-                    type="text"
-                    value={`LKR ${item.total.toFixed(2)}`}
-                    readOnly
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50"
-                  />
-                </div>
-
-                {items.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    className="p-2 text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
         </div>
-
-        <div className="border-t pt-4">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Discount:</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={discount}
-                  onChange={(e) => setDiscount(parseFloat(e.target.value || '0'))}
-                  className="w-16 border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <span className="text-sm text-gray-600">%</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Tax:</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={taxRate}
-                  onChange={(e) => setTaxRate(parseFloat(e.target.value || '0'))}
-                  className="w-16 border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <span className="text-sm text-gray-600">%</span>
-              </div>
-            </div>
-            
-            <div className="text-right space-y-1">
-              <div className="flex justify-between gap-8">
-                <span className="text-sm text-gray-600">Subtotal:</span>
-                <span className="font-medium">LKR {subtotal.toFixed(2)}</span>
-              </div>
-              {discount > 0 && (
-                <div className="flex justify-between gap-8">
-                  <span className="text-sm text-gray-600">Discount ({discount}%):</span>
-                  <span className="font-medium text-red-600">-LKR {discountAmount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between gap-8">
-                <span className="text-sm text-gray-600">Tax ({taxRate}%):</span>
-                <span className="font-medium">LKR {tax.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between gap-8 text-lg font-bold border-t pt-1">
-                <span>Total:</span>
-                <span>LKR {total.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Notes (Optional)
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Additional notes or terms..."
-          />
-        </div>
-
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading || inventoryLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-          >
-            <Calculator className="w-4 h-4" />
-            {loading ? 'Creating...' : 'Generate Invoice'}
-          </button>
-        </div>
-      </form>
-    </Modal>
+      </div>
+    </div>
   );
-}
+};
+
+export default DSCustomerInvoice;

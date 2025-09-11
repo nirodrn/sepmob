@@ -49,6 +49,11 @@ export function useFirebaseActions(basePath: string) {
     return newRef.key;
   }, [basePath]);
 
+  const setData = useCallback(async (path: string, data: any) => {
+    const dbRef = ref(database, `${basePath}/${path}`);
+    await set(dbRef, data);
+  }, [basePath]);
+
   const updateData = useCallback(async (path: string, data: any) => {
     const dbRef = ref(database, `${basePath}/${path}`);
     await update(dbRef, data);
@@ -59,5 +64,5 @@ export function useFirebaseActions(basePath: string) {
     await remove(dbRef);
   }, [basePath]);
 
-  return { addData, updateData, deleteData };
+  return { addData, setData, updateData, deleteData };
 }

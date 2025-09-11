@@ -1,42 +1,41 @@
 import { useState, useEffect } from 'react';
-import { onValue, Query } from 'firebase/database';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
-export function useFirebaseQuery<T>(query: Query | null) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export const useFirebaseQuery = <T,>(collectionName: string) => {
+  const [data, setData] = useState<T[] | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!query) {
-      setData(null);
+    if (!db) {
+      console.error("Firestore database is not initialized.");
       setLoading(false);
+      setError(new Error("Firestore not initialized"));
       return;
     }
 
-    setLoading(true);
+    const q = query(collection(db, collectionName), orderBy('createdAt', 'desc'));
 
-    const unsubscribe = onValue(
-      query,
-      (snapshot) => {
-        try {
-          const value = snapshot.val();
-          setData(value);
-          setError(null);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'An unknown error occurred');
-        } finally {
-          setLoading(false);
-        }
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const documents = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as T[];
+        setData(documents);
+        setLoading(false);
       },
       (err) => {
-        console.error('Firebase Query Error:', err);
-        setError(err.message);
+        console.error(`Error fetching ${collectionName}:`, err);
+        setError(err);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [query]);
+  }, [collectionName]);
 
   return { data, loading, error };
-}
+};

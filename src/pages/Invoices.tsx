@@ -1,54 +1,53 @@
-import React, { useState } from 'react';
-import { Plus, Search, Download, Eye, Calendar } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Search, Download, Eye, Calendar, Loader2 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
+import { useFirebaseQuery } from '../hooks/useFirebaseQuery';
+import { ErrorMessage } from '../components/Common/ErrorMessage';
+
+interface FirebaseInvoice {
+  id: string;
+  date: string;
+  customer: string;
+  items: { p: string; q: number; u: number; t: number }[];
+  total: number;
+  pay: 'cash' | 'card' | 'credit';
+  status: 'paid' | 'unpaid';
+  createdAt: { seconds: number; nanoseconds: number; };
+}
 
 interface Invoice {
   id: string;
   invoiceNumber: string;
   customerName: string;
   amount: number;
-  status: 'draft' | 'sent' | 'paid' | 'overdue';
-  paymentStatus: 'pending' | 'partial' | 'paid';
+  status: 'draft' | 'sent' | 'paid' | 'overdue'; // Mapping from 'paid'/'unpaid'
+  paymentStatus: 'pending' | 'partial' | 'paid'; // Mapping from 'paid'/'unpaid'
   createdAt: number;
   dueDate: number;
 }
 
-export function Invoices() {
-  const [invoices, setInvoices] = useState<Invoice[]>([
-    {
-      id: '1',
-      invoiceNumber: 'INV-2025-0045',
-      customerName: 'John Doe Store',
-      amount: 25000,
-      status: 'sent',
-      paymentStatus: 'pending',
-      createdAt: Date.now() - 1800000,
-      dueDate: Date.now() + 604800000, // 7 days from now
-    },
-    {
-      id: '2',
-      invoiceNumber: 'INV-2025-0044',
-      customerName: 'ABC Retail',
-      amount: 45000,
-      status: 'paid',
-      paymentStatus: 'paid',
-      createdAt: Date.now() - 86400000,
-      dueDate: Date.now() - 86400000,
-    },
-    {
-      id: '3',
-      invoiceNumber: 'INV-2025-0043',
-      customerName: 'XYZ Mart',
-      amount: 15000,
-      status: 'overdue',
-      paymentStatus: 'pending',
-      createdAt: Date.now() - 259200000,
-      dueDate: Date.now() - 86400000,
-    }
-  ]);
 
+export function Invoices() {
+  const { data, loading, error } = useFirebaseQuery<FirebaseInvoice>('dsinvoices');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  const invoices = useMemo(() => {
+    if (!data) return [];
+    return data.map((fbInvoice: FirebaseInvoice): Invoice => {
+      const createdAt = fbInvoice.createdAt ? new Date(fbInvoice.createdAt.seconds * 1000).getTime() : new Date(fbInvoice.date).getTime();
+      return {
+        id: fbInvoice.id,
+        invoiceNumber: fbInvoice.id,
+        customerName: fbInvoice.customer,
+        amount: fbInvoice.total,
+        status: fbInvoice.status === 'paid' ? 'paid' : 'overdue',
+        paymentStatus: fbInvoice.status === 'paid' ? 'paid' : 'pending',
+        createdAt: createdAt,
+        dueDate: createdAt + (7 * 24 * 60 * 60 * 1000), // Example: Due 7 days after creation
+      };
+    });
+  }, [data]);
 
   const getStatusBadge = (status: string) => {
     const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium';
@@ -87,6 +86,27 @@ export function Invoices() {
     return matchesSearch && matchesStatus;
   });
 
+  const summary = useMemo(() => {
+    const totalOutstanding = invoices
+      .filter(inv => inv.status === 'overdue')
+      .reduce((acc, inv) => acc + inv.amount, 0);
+
+    const paidThisMonth = invoices
+      .filter(inv => {
+        const invoiceDate = new Date(inv.createdAt);
+        const today = new Date();
+        return inv.status === 'paid' && 
+               invoiceDate.getMonth() === today.getMonth() && 
+               invoiceDate.getFullYear() === today.getFullYear();
+      })
+      .reduce((acc, inv) => acc + inv.amount, 0);
+
+    const overdueCount = invoices.filter(inv => inv.status === 'overdue').length;
+    const draftCount = invoices.filter(inv => inv.status === 'draft').length;
+
+    return { totalOutstanding, paidThisMonth, overdueCount, draftCount };
+  }, [invoices]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -105,19 +125,19 @@ export function Invoices() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Total Outstanding</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">LKR 85,000</p>
+          <p className="text-2xl font-bold text-red-600 mt-1">LKR {summary.totalOutstanding.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Paid This Month</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">LKR 145,000</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">LKR {summary.paidThisMonth.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Overdue</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">3</p>
+          <p className="text-2xl font-bold text-amber-600 mt-1">{summary.overdueCount}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Draft</p>
-          <p className="text-2xl font-bold text-gray-600 mt-1">2</p>
+          <p className="text-2xl font-bold text-gray-600 mt-1">{summary.draftCount}</p>
         </div>
       </div>
 
@@ -153,73 +173,81 @@ export function Invoices() {
 
       {/* Invoices Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Invoice</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Customer</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Amount</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Payment</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Due Date</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredInvoices.map((invoice) => (
-                <tr key={invoice.id} className="hover:bg-gray-50">
-                  <td className="py-3 px-4">
-                    <div>
-                      <p className="font-medium text-gray-900">{invoice.invoiceNumber}</p>
-                      <p className="text-sm text-gray-500">
-                        {formatDistanceToNow(new Date(invoice.createdAt), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <p className="text-gray-900">{invoice.customerName}</p>
-                  </td>
-                  <td className="py-3 px-4">
-                    <p className="font-medium text-gray-900">LKR {invoice.amount.toLocaleString()}</p>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={getStatusBadge(invoice.status)}>
-                      {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={getPaymentStatusBadge(invoice.paymentStatus)}>
-                      {invoice.paymentStatus.charAt(0).toUpperCase() + invoice.paymentStatus.slice(1)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-600">
-                        {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <button className="p-1 text-gray-400 hover:text-gray-600">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="p-1 text-gray-400 hover:text-gray-600">
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+        {loading ? (
+          <div className="p-8 text-center flex justify-center items-center">
+            <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+            <p className="ml-4 text-gray-500">Loading invoices...</p>
+          </div>
+        ) : error ? (
+            <ErrorMessage message="Failed to load invoices. Please try again later." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Invoice</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Customer</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Amount</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Payment</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Due Date</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredInvoices.length === 0 && (
-          <div className="p-8 text-center">
-            <p className="text-gray-500">No invoices found matching your criteria.</p>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredInvoices.map((invoice) => (
+                  <tr key={invoice.id} className="hover:bg-gray-50">
+                    <td className="py-3 px-4">
+                      <div>
+                        <p className="font-medium text-gray-900">{invoice.invoiceNumber}</p>
+                        <p className="text-sm text-gray-500">
+                          {formatDistanceToNow(new Date(invoice.createdAt), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="text-gray-900">{invoice.customerName}</p>
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="font-medium text-gray-900">LKR {invoice.amount.toLocaleString()}</p>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={getStatusBadge(invoice.status)}>
+                        {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={getPaymentStatusBadge(invoice.paymentStatus)}>
+                        {invoice.paymentStatus.charAt(0).toUpperCase() + invoice.paymentStatus.slice(1)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">
+                          {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <button className="p-1 text-gray-400 hover:text-gray-600">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button className="p-1 text-gray-400 hover:text-gray-600">
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredInvoices.length === 0 && !loading && (
+                <div className="p-8 text-center">
+                    <p className="text-gray-500">No invoices found.</p>
+                </div>
+            )}
           </div>
         )}
       </div>

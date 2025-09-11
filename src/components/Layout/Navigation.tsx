@@ -31,7 +31,13 @@ const navigationItems: NavItem[] = [
     name: 'Product Requests',
     href: '/requests',
     icon: ShoppingCart,
-    roles: ['DirectRepresentative', 'DirectShowroomManager', 'Distributor', 'DistributorRepresentative']
+    roles: ['DirectRepresentative', 'Distributor', 'DistributorRepresentative']
+  },
+  {
+    name: 'Product Requests',
+    href: '/direct-showroom/requests',
+    icon: ShoppingCart,
+    roles: ['DirectShowroomManager']
   },
   {
     name: 'Invoices',

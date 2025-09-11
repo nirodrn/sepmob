@@ -1,52 +1,74 @@
 import React, { useState } from 'react';
-import { Package, AlertTriangle, TrendingDown, Search, Filter } from 'lucide-react';
-import { useFirebaseData } from '../../hooks/useFirebaseData';
+import { useFirebaseData, useFirebaseActions } from '../../hooks/useFirebaseData';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
 import { ErrorMessage } from '../Common/ErrorMessage';
+import { Badge } from '../Common/Badge';
+import { Package, AlertTriangle, Search } from 'lucide-react';
+
+interface InventoryItem {
+  id: string;
+  product: string;
+  quantity: number;
+  status: string;
+  date: string;
+  price?: number;
+}
 
 export function InventoryOverview() {
-  const { data: inventory, loading, error } = useFirebaseData('finishedGoodsPackagedInventory');
+  const { data: inventory, loading, error } = useFirebaseData<Record<string, InventoryItem>>('dsinventory');
+  const { updateData } = useFirebaseActions('dsinventory');
+  const [prices, setPrices] = useState<Record<string, number | string>>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterLocation, setFilterLocation] = useState('all');
 
-  if (loading) return <LoadingSpinner text="Loading inventory..." />;
-  if (error) return <ErrorMessage message={error} />;
+  const handlePriceChange = (id: string, value: string) => {
+    setPrices({ ...prices, [id]: value });
+  };
 
-  const inventoryArray = inventory ? Object.entries(inventory).map(([id, data]) => ({ id, ...data })) : [];
-  
-  const filteredInventory = inventoryArray.filter(item => {
-    const matchesSearch = item.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.batchNumber?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLocation = filterLocation === 'all' || item.location === filterLocation;
-    return matchesSearch && matchesLocation;
+  const handleSavePrice = async (id: string) => {
+    const price = prices[id];
+    if (price !== undefined && price !== '') {
+      try {
+        await updateData(id, { price: parseFloat(price as string) });
+        alert('Price updated successfully!');
+        //-clear price from state after saving
+        const newPrices = { ...prices };
+        delete newPrices[id];
+        setPrices(newPrices);
+
+      } catch (e) {
+        console.error("Error updating price: ", e);
+        alert('Failed to update price.');
+      }
+    }
+  };
+
+  if (loading) return <LoadingSpinner text="Loading stock levels..." />;
+  if (error) return <ErrorMessage message={"Failed to load stock data."} />;
+
+  const inventoryItems = inventory ? Object.values(inventory).map(item => ({...item})) : [];
+
+  const filteredStock = inventoryItems.filter(item => {
+    return item.product?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  const locations = [...new Set(inventoryArray.map(item => item.location))].filter(Boolean);
-  const totalItems = inventoryArray.reduce((sum, item) => sum + (item.unitsInStock || 0), 0);
-  const lowStockItems = inventoryArray.filter(item => (item.unitsInStock || 0) < 10);
-  const totalProducts = new Set(inventoryArray.map(item => item.productName)).size;
-
-  const getStockStatus = (stock: number) => {
-    if (stock === 0) return { color: 'text-red-600 bg-red-50', label: 'Out of Stock' };
-    if (stock < 10) return { color: 'text-amber-600 bg-amber-50', label: 'Low Stock' };
-    if (stock < 50) return { color: 'text-blue-600 bg-blue-50', label: 'Normal' };
-    return { color: 'text-green-600 bg-green-50', label: 'Good Stock' };
-  };
+  const totalUnits = inventoryItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  const lowStockItems = inventoryItems.filter(item => (item.quantity || 0) < 10);
+  const totalProducts = new Set(inventoryItems.map(item => item.product)).size;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Inventory Overview</h1>
-        <p className="text-gray-600 mt-1">Monitor finished goods inventory levels and locations</p>
+        <h1 className="text-2xl font-bold text-gray-900">Showroom Stock Management</h1>
+        <p className="text-gray-600 mt-1">Monitor and manage product stock and pricing.</p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+       {/* Summary Cards */}
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Units</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">{totalItems.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-2">{totalUnits.toLocaleString()}</p>
             </div>
             <div className="p-3 rounded-full bg-blue-500">
               <Package className="w-6 h-6 text-white" />
@@ -77,19 +99,8 @@ export function InventoryOverview() {
             </div>
           </div>
         </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Locations</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">{locations.length}</p>
-            </div>
-            <div className="p-3 rounded-full bg-purple-500">
-              <Package className="w-6 h-6 text-white" />
-            </div>
-          </div>
-        </div>
       </div>
+
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -99,91 +110,69 @@ export function InventoryOverview() {
               <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search products or batch numbers..."
+                placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <select
-              value={filterLocation}
-              onChange={(e) => setFilterLocation(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Locations</option>
-              {locations.map(location => (
-                <option key={location} value={location}>{location}</option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
 
-      {/* Inventory Table */}
+      {/* Stock Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left py-3 px-4 font-medium text-gray-900">Product</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Batch</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Location</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Stock</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Variant</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-900">Quantity</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Expiry</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-900">Price</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredInventory.map((item) => {
-                const stockStatus = getStockStatus(item.unitsInStock || 0);
-                return (
+              {filteredStock.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="py-3 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{item.productName}</p>
-                        <p className="text-sm text-gray-500">Grade: {item.qualityGrade}</p>
-                      </div>
+                        <p className="font-medium text-gray-900">{item.product}</p>
+                    </td>
+                     <td className="py-3 px-4">
+                      <p className="font-medium text-gray-900">{item.quantity || 0}</p>
                     </td>
                     <td className="py-3 px-4">
-                      <p className="text-sm text-gray-900">{item.batchNumber}</p>
+                      <Badge color={item.status === 'in-inventory' ? 'blue' : 'gray'}>
+                          {item.status}
+                      </Badge>
                     </td>
                     <td className="py-3 px-4">
-                      <p className="text-sm text-gray-900">{item.location}</p>
+                       <input
+                        type="number"
+                        placeholder="Enter price"
+                        value={prices[item.id] ?? item.price ?? ''}
+                        onChange={(e) => handlePriceChange(item.id, e.target.value)}
+                        className="w-40 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </td>
                     <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">{item.unitsInStock || 0}</p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="text-sm text-gray-900">
-                        {item.variantName} ({item.variantSize} {item.variantUnit})
-                      </p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${stockStatus.color}`}>
-                        {stockStatus.label}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="text-sm text-gray-900">
-                        {item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A'}
-                      </p>
+                       <button
+                        onClick={() => handleSavePrice(item.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        Save Price
+                      </button>
                     </td>
                   </tr>
-                );
-              })}
+                ))}
             </tbody>
           </table>
         </div>
-
-        {filteredInventory.length === 0 && (
+        {filteredStock.length === 0 && (
           <div className="p-8 text-center">
             <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No inventory items found matching your criteria.</p>
+            <p className="text-gray-500">No inventory items found.</p>
           </div>
         )}
       </div>
