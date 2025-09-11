@@ -18,28 +18,28 @@ interface DashboardCardsProps {
 
 export function DashboardCards({ cards }: DashboardCardsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card, index) => (
-        <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">{card.title}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">{card.value}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-600">{card.title}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
               {card.change && (
-                <div className={`flex items-center mt-2 text-sm ${
+                <div className={`flex items-center mt-1 text-xs sm:text-sm ${
                   card.change.type === 'increase' ? 'text-green-600' : 'text-red-600'
                 }`}>
                   {card.change.type === 'increase' ? (
-                    <TrendingUp className="w-4 h-4 mr-1" />
+                    <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                   ) : (
-                    <TrendingDown className="w-4 h-4 mr-1" />
+                    <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                   )}
                   {Math.abs(card.change.value)}%
                 </div>
               )}
             </div>
-            <div className={`p-3 rounded-full ${card.color}`}>
-              <card.icon className="w-6 h-6 text-white" />
+            <div className={`p-2 sm:p-3 rounded-full ${card.color}`}>
+              <card.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
           </div>
         </div>

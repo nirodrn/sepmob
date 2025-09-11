@@ -87,23 +87,23 @@ export function Navigation() {
   );
 
   return (
-    <nav className="bg-white shadow-sm border-r border-gray-200 w-64 min-h-screen">
-      <div className="p-4">
-        <ul className="space-y-2">
+    <nav className="bg-white shadow-lg md:shadow-sm border-t md:border-r border-gray-200 w-full md:w-64 min-h-full">
+      <div className="p-2 md:p-4">
+        <ul className="flex justify-around md:flex-col md:space-y-2">
           {allowedItems.map((item) => (
-            <li key={item.name}>
+            <li key={item.name} className="flex-1 md:flex-none">
               <NavLink
                 to={item.href}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  `flex flex-col items-center justify-center gap-1 p-2 text-xs font-medium rounded-lg transition-colors md:flex-row md:gap-3 md:px-3 md:py-2 md:text-sm ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                      ? 'bg-blue-50 text-blue-700 md:border md:border-blue-200'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                   }`
                 }
               >
-                <item.icon className="w-5 h-5" />
-                {item.name}
+                <item.icon className="w-5 h-5 md:w-5 md:h-5" />
+                <span className="text-center">{item.name}</span>
               </NavLink>
             </li>
           ))}

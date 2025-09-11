@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { DashboardCards, getDashboardCards } from '../../Dashboard/DashboardCards';
-import { RecentActivity } from '../../Dashboard/RecentActivity';
 import DSCustomerInvoice from '../DSManager/DSCustomerInvoice';
 import { DSStockManagement } from '../DSManager/DSStockManagement';
 import { useAuth } from '../../../context/AuthContext';
-import { FileText, Package, Eye } from 'lucide-react';
+import { FileText, Eye } from 'lucide-react';
 
 export function DSStaffDashboard() {
   const { userData } = useAuth();
   const [showCustomerInvoice, setShowCustomerInvoice] = useState(false);
-  const [showStockView, setShowStockView] = useState(false);
 
   if (!userData) return null;
 
@@ -51,19 +49,6 @@ export function DSStaffDashboard() {
                 <div>
                   <p className="font-medium text-green-900">Customer Sale</p>
                   <p className="text-sm text-green-700">Generate customer invoice</p>
-                </div>
-              </div>
-            </button>
-            
-            <button 
-              onClick={() => setShowStockView(!showStockView)}
-              className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Eye className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="font-medium text-blue-900">{showStockView ? 'Hide' : 'View'} Stock</p>
-                  <p className="text-sm text-blue-700">Check available inventory</p>
                 </div>
               </div>
             </button>

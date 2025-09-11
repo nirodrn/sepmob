@@ -26,7 +26,6 @@ interface Invoice {
   dueDate: number;
 }
 
-
 export function Invoices() {
   const { data, loading, error } = useFirebaseQuery<FirebaseInvoice>('dsinvoices');
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,20 +64,6 @@ export function Invoices() {
     }
   };
 
-  const getPaymentStatusBadge = (status: string) => {
-    const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium';
-    switch (status) {
-      case 'pending':
-        return `${baseClasses} bg-amber-100 text-amber-800`;
-      case 'partial':
-        return `${baseClasses} bg-yellow-100 text-yellow-800`;
-      case 'paid':
-        return `${baseClasses} bg-green-100 text-green-800`;
-      default:
-        return `${baseClasses} bg-gray-100 text-gray-800`;
-    }
-  };
-
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch = invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase());
@@ -109,35 +94,35 @@ export function Invoices() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
           <p className="text-gray-600 mt-1">Manage customer invoices and payments</p>
         </div>
         
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors w-full sm:w-auto">
           <Plus className="w-5 h-5" />
           New Invoice
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">Total Outstanding</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">LKR {summary.totalOutstanding.toLocaleString()}</p>
+          <p className="text-sm text-gray-600">Outstanding</p>
+          <p className="text-xl md:text-2xl font-bold text-red-600 mt-1">LKR {summary.totalOutstanding.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">Paid This Month</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">LKR {summary.paidThisMonth.toLocaleString()}</p>
+          <p className="text-sm text-gray-600">Paid (Month)</p>
+          <p className="text-xl md:text-2xl font-bold text-green-600 mt-1">LKR {summary.paidThisMonth.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Overdue</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">{summary.overdueCount}</p>
+          <p className="text-xl md:text-2xl font-bold text-amber-600 mt-1">{summary.overdueCount}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Draft</p>
-          <p className="text-2xl font-bold text-gray-600 mt-1">{summary.draftCount}</p>
+          <p className="text-xl md:text-2xl font-bold text-gray-600 mt-1">{summary.draftCount}</p>
         </div>
       </div>
 
@@ -171,84 +156,111 @@ export function Invoices() {
         </div>
       </div>
 
-      {/* Invoices Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* Invoices List / Table */}
+      <div>
         {loading ? (
-          <div className="p-8 text-center flex justify-center items-center">
+          <div className="p-8 text-center flex justify-center items-center bg-white rounded-lg shadow-sm border border-gray-200">
             <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
             <p className="ml-4 text-gray-500">Loading invoices...</p>
           </div>
         ) : error ? (
             <ErrorMessage message="Failed to load invoices. Please try again later." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Invoice</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Customer</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Amount</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Payment</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Due Date</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{invoice.invoiceNumber}</p>
-                        <p className="text-sm text-gray-500">
-                          {formatDistanceToNow(new Date(invoice.createdAt), { addSuffix: true })}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="text-gray-900">{invoice.customerName}</p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">LKR {invoice.amount.toLocaleString()}</p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={getStatusBadge(invoice.status)}>
-                        {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={getPaymentStatusBadge(invoice.paymentStatus)}>
-                        {invoice.paymentStatus.charAt(0).toUpperCase() + invoice.paymentStatus.slice(1)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <button className="p-1 text-gray-400 hover:text-gray-600">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="p-1 text-gray-400 hover:text-gray-600">
-                          <Download className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredInvoices.length === 0 && !loading && (
-                <div className="p-8 text-center">
-                    <p className="text-gray-500">No invoices found.</p>
-                </div>
-            )}
+        ) : filteredInvoices.length === 0 ? (
+          <div className="p-8 text-center bg-white rounded-lg shadow-sm border border-gray-200">
+              <p className="text-gray-500">No invoices found.</p>
           </div>
+        ) : (
+          <>
+            <div className="space-y-4 md:hidden">
+              {filteredInvoices.map((invoice) => (
+                <div key={invoice.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-gray-900">{invoice.customerName}</p>
+                      <p className="text-sm text-gray-500">{invoice.invoiceNumber}</p>
+                    </div>
+                    <span className={getStatusBadge(invoice.status)}>
+                      {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                    </span>
+                  </div>
+                  <div className="mt-4 flex justify-between items-center">
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">LKR {invoice.amount.toLocaleString()}</p>
+                      <p className="text-sm text-gray-500">Due: {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100">
+                        <Eye className="w-5 h-5" />
+                      </button>
+                      <button className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100">
+                        <Download className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+               <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-medium text-gray-900">Invoice</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-900">Customer</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-900">Amount</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-900">Due Date</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredInvoices.map((invoice) => (
+                        <tr key={invoice.id} className="hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <div>
+                              <p className="font-medium text-gray-900">{invoice.invoiceNumber}</p>
+                              <p className="text-sm text-gray-500">
+                                {formatDistanceToNow(new Date(invoice.createdAt), { addSuffix: true })}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <p className="text-gray-900">{invoice.customerName}</p>
+                          </td>
+                          <td className="py-3 px-4">
+                            <p className="font-medium text-gray-900">LKR {invoice.amount.toLocaleString()}</p>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={getStatusBadge(invoice.status)}>
+                              {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-600">
+                                {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <button className="p-1 text-gray-400 hover:text-gray-600">
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button className="p-1 text-gray-400 hover:text-gray-600">
+                                <Download className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -5,6 +5,7 @@ import { Modal } from '../Common/Modal';
 import { LoadingSpinner } from '../Common/LoadingSpinner';
 import { ErrorMessage } from '../Common/ErrorMessage';
 import { Badge } from '../Common/Badge';
+import { Check, X } from 'lucide-react';
 
 interface Request {
   id: string;
@@ -85,57 +86,62 @@ export function HORequestApproval() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-900">Approve Product Requests</h2>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Approve Product Requests</h1>
       {pendingRequests.length === 0 ? (
-        <p>No pending requests.</p>
+        <div className="text-center p-8 bg-white rounded-lg shadow-sm border border-gray-200">
+          <p className="text-gray-500">There are no pending requests to review.</p>
+        </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="divide-y divide-gray-200">
             {pendingRequests.map((request) => (
-              <div key={request.id} className="p-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-gray-500">
-                      Request ID: <span className="font-medium text-gray-800">{request.customId || 'N/A'}</span>
+              <div key={request.id} className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500">
+                      ID: <span className="font-medium text-gray-800">{request.customId || 'N/A'}</span>
                     </p>
-                    <p className="text-sm text-gray-500">
-                      Requested by <span className="font-medium text-gray-800">{request.requestedByName}</span> on {new Date(request.requestedAt).toLocaleString()}
+                    <p className="text-sm text-gray-500 mt-1">
+                      From <span className="font-medium text-gray-800">{request.requestedByName}</span>
                     </p>
+                     <p className="text-xs text-gray-500">{new Date(request.requestedAt).toLocaleString()}</p>
                   </div>
-                  <Badge color={request.status === 'pending' ? 'yellow' : 'gray'}>
-                    {request.status}
-                  </Badge>
+                  <div className="mt-2 sm:mt-0">
+                    <Badge color={request.status === 'pending' ? 'yellow' : 'gray'}>
+                      {request.status}
+                    </Badge>
+                  </div>
                 </div>
 
                 <div className="mt-4">
-                  <h4 className="font-medium text-gray-800">Requested Items:</h4>
+                  <h4 className="font-medium text-gray-800 text-sm">Requested Items:</h4>
                   <ul className="list-disc list-inside mt-2 space-y-1 text-sm text-gray-700">
                     {request.items.map((item, index) => (
-                      <li key={index}>
-                        {item.productName} - Quantity: {item.quantity}
+                      <li key={index} className="flex justify-between items-center">
+                        <span>{item.productName} - <strong>Qty: {item.quantity}</strong></span>
                         {item.urgent && <Badge color="red" className="ml-2">Urgent</Badge>}
                       </li>
                     ))}
                   </ul>
                   {request.notes && (
-                    <p className="mt-2 text-sm text-gray-600">
+                    <p className="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
                       <span className="font-medium">Notes:</span> {request.notes}
                     </p>
                   )}
                 </div>
 
-                <div className="mt-6 flex gap-4">
+                <div className="mt-6 flex flex-col sm:flex-row gap-2">
                   <button
                     onClick={() => handleApprovalAction(request, 'approve')}
-                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+                    className="w-full sm:w-auto flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center gap-2 text-sm"
                   >
-                    Approve
+                    <Check size={16} /> Approve
                   </button>
                   <button
                     onClick={() => handleApprovalAction(request, 'reject')}
-                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                    className="w-full sm:w-auto flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center justify-center gap-2 text-sm"
                   >
-                    Reject
+                    <X size={16} /> Reject
                   </button>
                 </div>
               </div>
@@ -151,25 +157,25 @@ export function HORequestApproval() {
           title={`Confirm Request ${approvalAction === 'approve' ? 'Approval' : 'Rejection'}`}
         >
           <div className="space-y-4">
-            <p>
-              Are you sure you want to {approvalAction} this request from {selectedRequest.requestedByName}?
+            <p className="text-sm text-gray-700">
+              Are you sure you want to {approvalAction} this request from <span className="font-semibold">{selectedRequest.requestedByName}</span>?
             </p>
             <textarea
               value={approvalNotes}
               onChange={(e) => setApprovalNotes(e.target.value)}
               placeholder="Add notes (optional)..."
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border border-gray-300 rounded-md text-sm"
             />
-            <div className="flex justify-end gap-4">
-              <button onClick={() => setShowApprovalModal(false)} className="px-4 py-2 rounded-md">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <button onClick={() => setShowApprovalModal(false)} className="w-full sm:w-auto px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-sm">
                 Cancel
               </button>
               <button
                 onClick={processApproval}
                 disabled={processing}
-                className={`px-4 py-2 text-white rounded-md ${
-                  approvalAction === 'approve' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
-                }`}
+                className={`w-full sm:w-auto px-4 py-2 text-white rounded-md text-sm ${
+                  approvalAction === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                } disabled:opacity-50`}
               >
                 {processing ? 'Processing...' : `Confirm ${approvalAction}`}
               </button>

@@ -8,7 +8,6 @@ import { Invoices } from './pages/Invoices';
 import { SalesTracking } from './components/DirectRepresentative/SalesTracking';
 import { InventoryOverview } from './components/Inventory/InventoryOverview';
 import { CustomerManagement } from './components/Customers/CustomerManagement';
-import { SalesAnalytics } from './components/Analytics/SalesAnalytics';
 import { UserSettings } from './components/Settings/UserSettings';
 import { Login } from './pages/Login';
 import { NotFound } from './pages/NotFound';
@@ -81,7 +80,6 @@ function App() {
             <Route path="/sales" element={<ProtectedPage><SalesTracking /></ProtectedPage>} />
             <Route path="/inventory" element={<ProtectedPage><InventoryOverview /></ProtectedPage>} />
             <Route path="/customers" element={<ProtectedPage><CustomerManagement /></ProtectedPage>} />
-            <Route path="/analytics" element={<ProtectedPage><SalesAnalytics /></ProtectedPage>} />
             <Route path="/settings" element={<ProtectedPage><UserSettings /></ProtectedPage>} />
             <Route path="/ho/product-requests" element={<ProtectedPage><HOProductRequests /></ProtectedPage>} />
 
