@@ -59,7 +59,7 @@ export function HORequestApproval() {
         approvalNotes: approvalNotes,
       });
 
-      await addActivity('', {
+      await addActivity(null, {
         type: approvalAction === 'approve' ? 'ds_request_approved' : 'ds_request_rejected',
         timestamp: new Date().toISOString(),
         userId: userData.id,

@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { DashboardCards, getDashboardCards } from '../../Dashboard/DashboardCards';
-import DSCustomerInvoice from './DSCustomerInvoice';
-import { DSStockManagement } from './DSStockManagement'; // Correctly import the shared component
+import { DSStockManagement } from '../DSManager/DSStockManagement'; // Correctly import the shared component
 import { FileText, PlusCircle, FileCheck } from 'lucide-react';
 
 export function DSManagerDashboard() {
   const { userData } = useAuth();
-  const [showCustomerInvoice, setShowCustomerInvoice] = useState(false);
 
   if (!userData) return null;
 
@@ -51,24 +49,18 @@ export function DSManagerDashboard() {
                     </div>
                 </div>
             </Link>
-            <button onClick={() => setShowCustomerInvoice(true)} className="w-full text-left p-3 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors">
+            <Link to="invoices" className="w-full text-left p-3 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors block">
                 <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-green-600" />
                     <div>
-                        <p className="font-medium text-green-900">Customer Sale</p>
+                        <p className="font-medium text-green-900">New Invoice</p>
                         <p className="text-sm text-green-700">Generate customer invoice</p>
                     </div>
                 </div>
-            </button>
+            </Link>
           </div>
         </div>
       </div>
-
-      <DSCustomerInvoice
-        isOpen={showCustomerInvoice}
-        onClose={() => setShowCustomerInvoice(false)}
-        onSuccess={() => {}}
-      />
     </div>
   );
 }

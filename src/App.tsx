@@ -25,6 +25,7 @@ import { HODashboard } from './pages/Management/HODashboard';
 import { AdminDashboard } from './pages/Management/AdminDashboard';
 import { DSRequestApproval } from './components/DirectShowroom/DSManager/DSRequestApproval';
 import { DSRequestHistory } from './components/DirectShowroom/DSManager/DSRequestHistory';
+import { DSInvoices } from './pages/DirectShowroom/Invoices';
 
 function RoleBasedDashboard() {
   const { userData } = useAuth();
@@ -88,6 +89,7 @@ function App() {
                 <Route path="requests" element={<DSProductRequests />} />
                 <Route path="requests/approval" element={<DSRequestApproval />} />
                 <Route path="requests/history" element={<DSRequestHistory />} />
+                <Route path="invoices" element={<DSInvoices />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
