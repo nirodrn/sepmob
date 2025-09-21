@@ -61,17 +61,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const snapshot = await get(userRef);
           if (snapshot.exists()) {
             const data = snapshot.val();
-            setUserData({
-              id: user.uid,
-              email: data.email,
-              name: data.name,
-              role: data.role,
-              department: data.department,
-              status: data.status,
-              createdAt: data.createdAt
-            });
+
+            // --- Data Validation ---
+            if (!data.email || !data.name || !data.role || !data.status) {
+                console.error('Critical Auth Error: User data from database is incomplete.', { uid: user.uid, fetchedData: data });
+                setUserData(null); // Force logout/redirect by nullifying user data
+            } else {
+                setUserData({
+                    id: user.uid,
+                    email: data.email,
+                    name: data.name,
+                    role: data.role,
+                    department: data.department || 'N/A', // Provide default for optional field
+                    status: data.status,
+                    createdAt: data.createdAt
+                });
+            }
+            
           } else {
-            console.error('Authentication error: User data not found in database.');
+            console.error('Authentication error: User data not found in database.', { uid: user.uid });
             setUserData(null);
           }
         } catch (error) {
