@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, LogOut, Wifi, WifiOff, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useOffline } from '../../context/OfflineContext';
@@ -6,6 +6,7 @@ import { useOffline } from '../../context/OfflineContext';
 export function Header() {
   const { userData, signOut } = useAuth();
   const { isOnline, offlineData } = useOffline();
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -17,6 +18,10 @@ export function Header() {
 
   const getTotalOfflineItems = () => {
     return offlineData.salesRequests.length + offlineData.invoices.length + offlineData.activities.length;
+  };
+
+  const toggleNotifications = () => {
+    setIsNotificationsOpen(!isNotificationsOpen);
   };
 
   return (
@@ -46,12 +51,38 @@ export function Header() {
             </div>
 
             {/* Notifications */}
-            <button className="relative p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100">
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                3
-              </span>
-            </button>
+            <div className="relative">
+              <button
+                onClick={toggleNotifications}
+                className="relative p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  3
+                </span>
+              </button>
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="p-4">
+                    <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
+                    <ul className="mt-4 space-y-4">
+                      <li className="p-2 hover:bg-gray-100 rounded-md">
+                        <p className="font-medium">New sales request</p>
+                        <p className="text-sm text-gray-500">A new sales request has been submitted by John Doe.</p>
+                      </li>
+                      <li className="p-2 hover:bg-gray-100 rounded-md">
+                        <p className="font-medium">Invoice paid</p>
+                        <p className="text-sm text-gray-500">Invoice #1234 has been paid by Jane Smith.</p>
+                      </li>
+                      <li className="p-2 hover:bg-gray-100 rounded-md">
+                        <p className="font-medium">Stock running low</p>
+                        <p className="text-sm text-gray-500">Stock for product XYZ is running low.</p>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* User Menu */}
             <div className="flex items-center gap-3">
