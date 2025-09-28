@@ -91,6 +91,7 @@ function App() {
                 <Route path="requests/history" element={<DSRequestHistory />} />
                 <Route path="invoices" element={<DSInvoices />} />
             </Route>
+            <Route path="/distributor/requests" element={<ProtectedPage><DSProductRequests /></ProtectedPage>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

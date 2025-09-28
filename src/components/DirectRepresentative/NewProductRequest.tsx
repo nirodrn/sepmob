@@ -10,11 +10,12 @@ interface NewProductRequestProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  databaseTable: string;
 }
 
-export function NewProductRequest({ isOpen, onClose, onSuccess }: NewProductRequestProps) {
+export function NewProductRequest({ isOpen, onClose, onSuccess, databaseTable }: NewProductRequestProps) {
   const { userData } = useAuth();
-  const { addData } = useFirebaseActions('dsreqs');
+  const { addData } = useFirebaseActions(databaseTable);
   const { data: productsData, loading: productsLoading, error: productsError } = useFirebaseData('products');
   
   const [loading, setLoading] = useState(false);

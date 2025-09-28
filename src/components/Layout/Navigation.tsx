@@ -29,7 +29,7 @@ const navigationItems: NavItem[] = [
   },
   {
     name: 'Product Requests',
-    href: '/requests',
+    href: '/distributor/requests',
     icon: ShoppingCart,
     roles: ['DirectRepresentative', 'Distributor', 'DistributorRepresentative']
   },
